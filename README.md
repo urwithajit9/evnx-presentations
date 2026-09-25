@@ -1,7 +1,7 @@
 # evnx presentations — Beamer sources
 
 Three decks, built from **real execution output** captured from `evnx 0.5.0`
-at commit `9cfe75b`. No output in these slides was typed by hand; every
+at tag `v0.5.0` (`85a52c3`). No output in these slides was typed by hand; every
 terminal block is `\input` from a file in `captures/`.
 
 | Deck | Audience | Frames |
@@ -148,6 +148,10 @@ offline behaviour and the transport guard only. Nothing was pushed, shared or
 revoked against `api.evnx.dev`, and the one account address that appeared was
 redacted to `you@example.com`.
 
-**Version.** The decks state `evnx 0.5.0 @ 9cfe75b`. If v0.5.0 is tagged at a
-later commit, update the footer in `common/evnx-preamble.tex` (`\verifiedon`)
-and the title-slide lines in each `main.tex`.
+**Version.** The decks are pinned to the released tag **`v0.5.0` = `85a52c3`**, not
+to a moving branch. Every capture was regenerated from a binary built at that tag
+and verified byte-identical (18 `--help` captures, 0 differences).
+
+To re-pin for a future release: update `\verifiedon` in
+`common/evnx-preamble.tex`, the title-slide line in each `main.tex`, the
+`standalone/*.tex` subtitle line, and `captures/00-baseline.txt`.

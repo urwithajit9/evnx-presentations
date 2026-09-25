@@ -1,0 +1,13 @@
+$ evnx --help   # tail of a default build
+  -V, --version   Print version
+
+Not built into this binary:
+  backup, restore        cargo install evnx --features backup
+  migrate                cargo install evnx --features migrate
+  auth, vault, cloud     cargo install evnx --features cloud
+
+`cargo install evnx` compiles with no features. For all of them at once:
+  cargo install evnx --all-features
+
+Every prebuilt binary — Homebrew, Scoop, winget, npm, PyPI and the GitHub
+Release — already includes all of them.

@@ -16,7 +16,7 @@
 \begin{frame}[plain]
   \titlepage
   \begin{center}\footnotesize
-  \textcolor{evnxMuted}{evnx 0.5.0 @ \texttt{9cfe75b}. Every terminal block is a
+  \textcolor{evnxMuted}{evnx 0.5.0 @ tag \texttt{v0.5.0} (\texttt{85a52c3}). Every terminal block is a
   real run.}
   \end{center}
 \end{frame}
@@ -298,7 +298,7 @@ evnx vault create shop/production
 evnx cloud link shop/production          # bind this directory
 
 evnx cloud push                          # encrypt .env, upload ciphertext
-evnx vault share shop/production --user teammate@example.com
+evnx vault share shop/production --with teammate@example.com
 
 # teammate, on another machine
 evnx auth login && evnx cloud pull       # .env.production appears
@@ -314,7 +314,7 @@ evnx auth login && evnx cloud pull       # .env.production appears
 \begin{frame}[fragile]{The chain: a pipeline, with no plaintext file}
 \begin{lstlisting}[style=evnxcode,language=bash]
 # a read-only token scoped to one vault
-evnx auth token create --scope read_only --vault shop/production
+evnx auth token create ci --scope read --vault shop/production
 
 # in CI - the secrets never touch the filesystem
 echo "$EVNX_MASTER_PASSWORD" | \
@@ -402,6 +402,12 @@ evnx cloud run --vault shop/production -- printenv DATABASE_URL
   \url{https://www.evnx.dev} \quad\textperiodcentered\quad
   \texttt{curl -fsSL https://dotenv.space/install.sh | sh}
   \end{center}
+
+  \vspace{0.6em}
+  {\footnotesize \textbf{Installing with cargo?} Use
+  \texttt{cargo install evnx --all-features} --- the plain form compiles with
+  \texttt{default = []} and omits \texttt{cloud}, \texttt{backup} and
+  \texttt{migrate}. Every other channel ships all of them.}
 \end{frame}
 
 \end{document}

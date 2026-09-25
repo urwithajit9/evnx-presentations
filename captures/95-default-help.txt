@@ -1,0 +1,37 @@
+# a build from `cargo install evnx` (default features = [])
+$ evnx --help
+Manage .env files — validation, secret scanning, and format conversion
+
+Usage: evnx [OPTIONS] <COMMAND>
+
+Commands:
+  init         Interactive project setup — generates .env.example
+  add          Add environment variables to existing .env files
+  validate     Check .env against .env.example, find issues
+  scan         Detect secrets that look real (AWS keys, tokens, etc.)
+  diff         Compare .env vs .env.example — show missing/extra vars
+  convert      Transform `.env` files into multiple output formats
+  sync         Keep .env and .env.example in sync
+  template     Generate config files from templates
+  doctor       Check .env files, Git config, project structure, and security
+  spec         Declare what each variable is: required, format, secret
+  completions  Generate shell completions
+  help         Print this message or the help of the given subcommand(s)
+
+Options:
+  -v, --verbose   Enable verbose output
+  -q, --quiet     Suppress non-essential output
+      --no-color  Disable colored output
+  -h, --help      Print help
+  -V, --version   Print version
+
+Not built into this binary:
+  backup, restore        cargo install evnx --features backup
+  migrate                cargo install evnx --features migrate
+  auth, vault, cloud     cargo install evnx --features cloud
+
+`cargo install evnx` compiles with no features. For all of them at once:
+  cargo install evnx --all-features
+
+Every prebuilt binary — Homebrew, Scoop, winget, npm, PyPI and the GitHub
+Release — already includes all of them.

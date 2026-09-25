@@ -1,0 +1,5 @@
+# the same binary built --all-features (every prebuilt channel)
+$ evnx --help | grep -c "Not built into this binary"
+0
+
+# absent, correctly

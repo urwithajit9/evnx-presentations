@@ -1,2 +1,7 @@
 $ cargo clippy --all-features --all-targets -- -D warnings
-    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.25s
+    Checking evnx v0.5.0 (/home/you/evnx)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 13.54s
+
+$ cargo clippy --all-targets -- -D warnings      # default features
+    Checking mockito v1.7.2
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 6.09s

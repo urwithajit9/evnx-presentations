@@ -16,7 +16,7 @@
 \begin{frame}[plain]
   \titlepage
   \begin{center}\footnotesize
-  \textcolor{evnxMuted}{evnx 0.5.0 @ \texttt{9cfe75b} --- every number measured,
+  \textcolor{evnxMuted}{evnx 0.5.0 @ tag \texttt{v0.5.0} (\texttt{85a52c3}) --- every number measured,
   not estimated.}
   \end{center}
 \end{frame}
@@ -33,7 +33,7 @@
       \item How a command is wired, end to end
       \item The invariants: exit codes, streams, determinism
       \item The crypto boundary
-      \item Testing: 987 tests and what each layer is for
+      \item Testing: 988 + 775 tests, and what each layer is for
       \item Contributing: build, test, conventions
     \end{enumerate}
   \end{block}
@@ -338,8 +338,8 @@ format!("\{:064x\}", seed ^ 0x5DEECE66D)
 % =========================================================================
 \section{Testing}
 
-\begin{frame}[fragile]{987 tests, in layers}
-  \capturepart{72-test-run.txt}{1}{18}
+\begin{frame}[fragile]{Two suites, two configurations}
+  \capture{72-test-run.txt}
 \end{frame}
 
 \begin{frame}{What each layer is for}
@@ -386,6 +386,61 @@ format!("\{:064x\}", seed ^ 0x5DEECE66D)
   broke. A fix whose test still passes when reverted is not tested.}
 \end{frame}
 
+
+% =========================================================================
+\section{The two builds}
+
+\begin{frame}{\texttt{cargo install} builds a different binary to the one you download}
+  \begin{center}
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    \textbf{Channel} & \textbf{Built with} & \textbf{Commands} \\
+    \midrule
+    Homebrew, Scoop, winget & \flag{--all-features} & all 17 \\
+    npm, PyPI, GitHub Release, Docker & \flag{--all-features} & all 17 \\
+    \texttt{cargo install evnx} & \texttt{default = []} & \textbf{11} \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+
+  \vspace{0.7em}
+  \texttt{backup}, \texttt{restore}, \texttt{migrate}, \texttt{auth},
+  \texttt{vault} and \texttt{cloud} are \texttt{\#[cfg]}-gated out of the
+  \texttt{Commands} enum --- so in a default build they are not "disabled",
+  they \emph{do not exist}.
+
+  \vspace{0.6em}
+  \begin{alertblock}{This is the configuration CI never checked}
+    Until v0.5.0, CI linted and tested only \flag{--all-features}. The default
+    build had accumulated \textbf{six unused imports, two clippy errors and
+    eight failing tests} --- none of them visible, because the canonical install
+    path was the one configuration nobody ran.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}[fragile]{What a default build tells the user now}
+  \capture{97-default-hint.txt}
+
+  {\footnotesize Attached with \texttt{cfg\_attr} on the root command, so it
+  appears \emph{only} in a build that is actually missing something.}
+\end{frame}
+
+\begin{frame}[fragile]{Correctly scoped: absent from the prebuilt binaries}
+  \capture{98-allfeatures-nohint.txt}
+
+  \begin{block}{The lesson, generalised}
+    A feature flag that removes a subcommand removes the place you would have
+    put the explanation. Each module still carries a
+    \texttt{"feature not enabled"} stub written for exactly this case --- and
+    all three were \textbf{unreachable}, because there was no enum variant left
+    to dispatch to.
+  \end{block}
+
+  \vspace{0.4em}
+  {\footnotesize Three tests now assert the hint is present in a default build
+  and absent in an \flag{--all-features} one.}
+\end{frame}
+
 % =========================================================================
 \section{Contributing}
 
@@ -394,7 +449,8 @@ format!("\{:064x\}", seed ^ 0x5DEECE66D)
 git clone https://github.com/urwithajit9/evnx && cd evnx
 
 cargo build --release --all-features     # ~60s cold
-cargo test  --all-features               # 987 tests
+cargo test  --all-features               # 988 tests
+cargo test                               # 775 tests (default = [])
 cargo clippy --all-features --all-targets -- -D warnings
 cargo fmt --all --check
 
@@ -409,13 +465,19 @@ cargo fmt --all --check
   \end{tabular}
 \end{frame}
 
-\begin{frame}[fragile]{The lints must be clean}
+\begin{frame}[fragile]{The lints must be clean --- in both configurations}
   \capture{73-clippy.txt}
 
-  \begin{block}{CI runs}
-    \texttt{fmt} $\rightarrow$ \texttt{clippy --all-targets -D warnings}
-    $\rightarrow$ \texttt{test --all-features} $\rightarrow$ \texttt{cargo audit}
-    $\rightarrow$ \texttt{cargo publish --dry-run}.
+  \begin{block}{CI runs both configurations}
+    \texttt{fmt} $\rightarrow$
+    \texttt{clippy --all-features --all-targets -D warnings} $\rightarrow$
+    \textbf{\texttt{clippy --all-targets -D warnings}} $\rightarrow$
+    \texttt{test --all-features} $\rightarrow$ \texttt{cargo audit} $\rightarrow$
+    \texttt{cargo publish --dry-run}.
+
+    \vspace{0.3em}
+    {\footnotesize The second clippy step is new in v0.5.0 --- see the next
+    slide for why it had to be added.}
   \end{block}
 \end{frame}
 

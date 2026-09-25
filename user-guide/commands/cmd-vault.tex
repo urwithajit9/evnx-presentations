@@ -8,14 +8,21 @@
     \texttt{vault create <NAME>} & \texttt{app} or \texttt{app/production} \\
     \texttt{vault list}          & Vaults you can reach \\
     \texttt{vault delete <NAME>} & Soft delete \\
-    \texttt{vault share <NAME> --user <EMAIL>} & Wrap the key for someone else \\
+    \texttt{vault share <NAME> --with <EMAIL>} & Wrap the key for someone else \\
     \texttt{vault members <NAME>} & Who has access, at what role \\
     \texttt{vault role <NAME> --user --role} & Change a role \\
     \texttt{vault revoke <NAME> --user <EMAIL>} & Remove \textbf{and re-key} \\
     \bottomrule
   \end{tabular}
 
-  \vspace{0.5em}
+  \vspace{0.4em}
+  \begin{alertblock}{Two names for the same thing}
+    \cmd{vault share} takes \flag{--with}; \cmd{vault revoke} and
+    \cmd{vault role} take \flag{--user}. Same concept, two flags --- worth
+    knowing before you guess.
+  \end{alertblock}
+
+  \vspace{0.3em}
   {\footnotesize A vault name is \texttt{name} or \texttt{name/environment};
   \texttt{app/production} binds naturally to \file{.env.production}.}
 \end{frame}
@@ -66,7 +73,7 @@
   \textbf{Use cases}
   \begin{itemize}\footnotesize
     \item \texttt{evnx vault create app/production}
-    \item \texttt{evnx vault share app/production --user teammate@example.com}
+    \item \texttt{evnx vault share app/production --with teammate@example.com}
     \item \texttt{evnx vault role app/production --user t@x.com --role viewer}
     \item \texttt{evnx vault revoke app/production --user former@example.com}
   \end{itemize}

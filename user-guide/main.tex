@@ -18,7 +18,7 @@
   \titlepage
   \begin{center}\footnotesize
   \textcolor{evnxMuted}{Every output in this deck is a real run, captured from
-  \texttt{evnx 0.5.0} at commit \texttt{9cfe75b}.}
+  \texttt{evnx 0.5.0}, tag \texttt{v0.5.0} (\texttt{85a52c3}).}
   \end{center}
 \end{frame}
 
@@ -40,11 +40,30 @@
     Language    & Rust (edition 2021, MSRV 1.85) \\
     Licence     & MIT \\
     Install     & 9 channels: curl, brew, scoop, winget, npm, pip, cargo, Action, Docker \\
+    Released    & tag \texttt{v0.5.0} = \texttt{85a52c3} \\
   \end{tabular}
 \end{frame}
 
 \begin{frame}[fragile]{The command surface}
   \capture{01-help-root.txt}
+\end{frame}
+
+\begin{frame}[fragile]{One caveat on installing}
+  Every prebuilt channel ships \textbf{all 17 commands}. \texttt{cargo install}
+  is the exception --- it compiles from source with \texttt{default = []}, which
+  is 11 commands.
+
+  \vspace{0.5em}
+\begin{lstlisting}[style=evnxcode,language=bash]
+cargo install evnx                    # 11 commands
+cargo install evnx --all-features     # all 17
+cargo install evnx --features cloud   # + auth, vault, cloud
+\end{lstlisting}
+
+  \vspace{0.3em}
+  {\footnotesize New in v0.5.0: a build that is missing features says so in
+  \texttt{--help}, and names the flag that would add them. The prebuilt binaries
+  never show that block.}
 \end{frame}
 
 \begin{frame}{The exit-code contract}

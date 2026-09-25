@@ -1,7 +1,7 @@
-commit: 9cfe75b93b7197e99ef6e29113c68a7c5c24a3a9
-short: 9cfe75b
-describe: v0.3.8-50-g9cfe75b
+commit: 85a52c3f87a3a4855a7af469bbe9eed29f855a07
+short:  85a52c3
+tag:    v0.5.0
 version: evnx 0.5.0
-rustc: rustc 1.98.0 (88d9e12ae 2026-08-18)
-cargo: cargo 1.98.0 (797e8a9bc 2026-08-05)
-date: 2026-09-24T17:59:25Z
+rustc:  rustc 1.98.0 (88d9e12ae 2026-08-18)
+cargo:  cargo 1.98.0 (797e8a9bc 2026-08-05)
+date:   2026-09-25T13:21:35Z
