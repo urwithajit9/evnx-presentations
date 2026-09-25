@@ -1,0 +1,470 @@
+% ===========================================================================
+%  evnx for Python Backend Developers  —  Django, FastAPI, Flask, Celery
+%  Persona AKS.  Build: pdflatex -interaction=nonstopmode python-backend.tex
+% ===========================================================================
+\documentclass[aspectratio=169,10pt]{beamer}
+
+\newcommand{\capturedir}{../captures}
+\input{persona-preamble}
+
+\title{evnx for Python backend developers}
+\subtitle{Django, FastAPI, Celery --- and the config bugs that reach production}
+\date{}
+
+\begin{document}
+
+\begin{frame}[plain]
+  \titlepage
+  \audience{Django · FastAPI · Flask · Celery · Docker Compose · Kubernetes}
+  \begin{center}\footnotesize
+  \textcolor{evnxMuted}{evnx 0.5.2. Every terminal block is a real run.}
+  \end{center}
+\end{frame}
+
+% =========================================================================
+\begin{frame}{This deck in one slide}
+  \begin{block}{Python backend is evnx's strongest fit --- and here is why}
+    evnx's validation rules were written from the same incident reports you
+    have lived through. \texttt{DEBUG="False"}. A placeholder
+    \texttt{SECRET\_KEY} in staging. A \file{.env} that Gunicorn never loaded.
+    These are not generic ``file hygiene''. They are Django bugs with names.
+  \end{block}
+
+  \vspace{0.6em}
+  \begin{block}{Two things the room will have been told wrong}
+    \begin{enumerate}
+      \item ``evnx cannot store multi-line values like PEM keys.''
+            \textbf{It can.} We will run it.
+      \item ``\cmd{validate} warns about \texttt{localhost} in production.''
+            \textbf{It does not.} It warns about \texttt{localhost} when
+            \emph{Docker} is present. Different rule, different trigger.
+    \end{enumerate}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Contents}\tableofcontents[hideallsubsections]\end{frame}
+
+% =========================================================================
+\section{Three incidents}
+
+\begin{frame}{You have shipped all three of these}
+  \small
+  \begin{block}{1 --- The debug page}
+    Django error pages with full settings, publicly visible.
+    \texttt{DEBUG = os.getenv("DEBUG")} and the value was the \emph{string}
+    \texttt{"False"} --- non-empty, therefore truthy.
+  \end{block}
+
+  \begin{block}{2 --- The half-rotated key}
+    Celery tasks failing on auth. The web container got the new
+    \texttt{STRIPE\_SECRET\_KEY}; the worker container still had the old one.
+    Different \texttt{env\_file:} entries in Compose.
+  \end{block}
+
+  \begin{block}{3 --- The variable nobody told DevOps about}
+    \texttt{APP\_FEATURE\_FLAGS\_URL} works locally, crashes staging at startup
+    on pydantic-settings validation. It was never added to Secrets Manager.
+  \end{block}
+
+  \saythis{``Show of hands for number one.'' It is always number one.}
+\end{frame}
+
+\begin{frame}{Which layer catches which}
+  \small
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    \textbf{Incident} & \textbf{Caught by} & \textbf{When} \\
+    \midrule
+    \texttt{DEBUG="False"}        & \cmd{evnx validate} & pre-commit, before it exists \\
+    Worker/web key drift          & \cmd{evnx cloud run} & at process start, one source \\
+    Missing variable in staging   & \cmd{evnx diff} / \cmd{sync -{}-check} & CI, on the PR \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{1em}
+  \begin{block}{The division of labour, stated once}
+    \textbf{evnx guards the file. pydantic guards the process.} You need both.
+    evnx cannot know your \texttt{Settings} class; pydantic cannot know that
+    your teammate's \file{.env} is missing a key until the process boots.
+  \end{block}
+\end{frame}
+
+% =========================================================================
+\section{validate, on a real Django file}
+
+\begin{frame}[fragile]{The input}
+\begin{lstlisting}[style=evnxcode]
+# .env
+DEBUG=False
+SECRET_KEY=your_secret_key_here
+DATABASE_URL=postgresql://u:p@localhost:5432/app
+CELERY_BROKER_URL=redis://localhost:6379/0
+STRIPE_SECRET_KEY=changeme
+SENTRY_DSN=notaurl
+
+# .env.example also lists APP_FEATURE_FLAGS_URL
+# and there is a Dockerfile in the directory
+\end{lstlisting}
+
+  \vspace{0.4em}
+  \saythis{``Count the problems. I count six. Let us see how many it finds.''}
+\end{frame}
+
+\begin{frame}[fragile]{\cmd{evnx validate -{}-validate-formats}}
+  \capturepart{persona/py-01-validate.txt}{1}{24}
+  \realrun{part 1 of 2}
+\end{frame}
+
+\begin{frame}[fragile]{\ldots{} and the rest}
+  \capturepart{persona/py-01-validate.txt}{25}{48}
+  \realrun{part 2 of 2 --- exit \exitone}
+\end{frame}
+
+\begin{frame}{What it found, and what it did not}
+  \small
+  \begin{tabular}{@{}clp{6.0cm}@{}}
+    \toprule
+    & \textbf{Issue} & \textbf{Rule} \\
+    \midrule
+    \solved & \texttt{APP\_FEATURE\_FLAGS\_URL} missing & compared against \file{.env.example} \\
+    \solved & \texttt{SECRET\_KEY} placeholder + weak   & two separate rules, both fire \\
+    \solved & \texttt{STRIPE\_SECRET\_KEY=changeme}     & placeholder + weak \\
+    \solved & \texttt{DEBUG="False"}                    & boolean-string trap \\
+    \solved & \texttt{localhost} in two URLs            & \textbf{because a Dockerfile is present} \\
+    \unsolved & \texttt{SENTRY\_DSN=notaurl}            & not checked --- see next slide \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.7em}
+  {\footnotesize 5 errors, 3 warnings, exit \exitone. Every one of them is
+  \flag{-{}-fix}-able except the Docker/localhost pair, which needs a human to
+  decide the service name.}
+\end{frame}
+
+% =========================================================================
+\section{Two rules that are narrower than you think}
+
+\begin{frame}[fragile]{The \texttt{localhost} rule is a \emph{Docker} rule}
+  Same \file{.env}, two \texttt{localhost} URLs. The only thing that changes
+  between these runs is whether a \file{Dockerfile} exists.
+
+  \vspace{0.4em}
+  \capture{persona/py-08-localhost-nodocker.txt}
+  \vspace{-0.3em}
+  \capture{persona/py-09-localhost-docker.txt}
+  \realrun{\texttt{touch Dockerfile} is the entire difference}
+\end{frame}
+
+\begin{frame}{What that rule actually is}
+  \begin{correction}{it is \texttt{check\_localhost\_docker}, not a production rule}
+    Gated on Docker config being present. Fires only on keys containing
+    \texttt{URL}, \texttt{HOST} or \texttt{ADDR}. There is \textbf{no}
+    ``localhost in production'' rule --- a \file{.env.production} full of
+    \texttt{localhost} passes clean, even with \flag{-{}-strict}.
+  \end{correction}
+
+  \vspace{0.8em}
+  \begin{trap}{And note the exit code}
+    Both runs exit \exitzero, and the JSON says
+    \texttt{"status": "passed"}. \textbf{Warnings never fail the command}, and
+    \flag{-{}-strict} does not change that --- it means ``also report variables
+    present but not declared''. To gate a merge on warnings, read
+    \texttt{summary.warnings} from \flag{-{}-format json}.
+  \end{trap}
+\end{frame}
+
+\begin{frame}[fragile]{Gating on warnings, since the exit code will not}
+  \capture{persona/py-11-validate-json-warnings.txt}
+  \realrun{the same two warnings, machine-readable}
+
+  \vspace{0.4em}
+\begin{lstlisting}[style=evnxcode]
+# fail the job on any warning, not just errors
+test "$(evnx validate --format json | jq .summary.warnings)" -eq 0
+\end{lstlisting}
+
+  {\footnotesize Machine formats go to \textbf{stdout}; the human trailer goes
+  to \textbf{stderr}. That separation is why the pipe above is safe.}
+\end{frame}
+
+\begin{frame}[fragile]{The URL rule catches shape, not spelling}
+\begin{lstlisting}[style=evnxcode]
+DATABASE_URL=postgress://u:p@db.internal:5432/app   # typo   -> NOT flagged
+API_URL=htps://api.acme.io                          # typo   -> NOT flagged
+WEBHOOK_URL=notaurl                                 # no scheme -> flagged
+\end{lstlisting}
+
+  \vspace{0.5em}
+  \begin{block}{Why, from the source}
+    \file{src/core/spec.rs:96} --- \texttt{is\_url} splits on
+    \texttt{"://"}, accepts \textbf{any} RFC-shaped scheme, and requires a
+    non-empty authority. That is deliberate: it has to accept
+    \texttt{redis://}, \texttt{amqp://}, \texttt{mongodb+srv://} and
+    \texttt{jdbc:postgresql://}. A scheme allowlist would break more than it
+    catches.
+  \end{block}
+
+  \vspace{0.4em}
+  {\footnotesize \textbf{Say the honest version:} it catches ``this is not a
+  URL at all'', not ``you typed \texttt{postgress}''. For the typo, use
+  \cmd{evnx spec} with \texttt{format = "url"} plus your own regex.}
+\end{frame}
+
+\begin{frame}{Also: the format check is keyed on the \emph{name}}
+  \texttt{SENTRY\_DSN=notaurl} was not flagged. \texttt{WEBHOOK\_URL=notaurl}
+  was.
+
+  \vspace{0.8em}
+  \begin{block}{The trigger}
+    Format validation applies to keys containing \texttt{URL}, \texttt{URI} or
+    \texttt{ENDPOINT}. \texttt{DSN} is not in that set --- so Sentry,
+    Bugsnag and anything else using ``DSN'' as a noun is invisible to it.
+  \end{block}
+
+  \vspace{0.8em}
+  \begin{block}{The fix you control}
+    \cmd{evnx spec} lets you declare per-variable contracts:
+    \vspace{0.3em}
+    \begin{center}\ttfamily\scriptsize
+    {[}vars.SENTRY\_DSN{]}\\ format = "url"\\ required = true
+    \end{center}
+  \end{block}
+\end{frame}
+
+% =========================================================================
+\section{Multi-line values}
+
+\begin{frame}{The claim you have probably read}
+  \begin{center}\Large
+  ``Multi-line values (PEM keys, JSON service accounts) --- \\
+  \textbf{not supported by the parser}.''
+  \end{center}
+
+  \vspace{1.2em}
+  This appears in the persona research, in the backlog, and it shaped a
+  roadmap item with a release window attached to it.
+
+  \vspace{1.2em}
+  \begin{center}\large It is wrong. Here is the run.\end{center}
+
+  \saythis{This is a good moment to explain \emph{why} it was wrong: the
+  verification script hit exit 2 from a missing \file{.env.example} and read it
+  as a parse error.}
+\end{frame}
+
+\begin{frame}[fragile]{A PEM private key, round-tripped}
+  \capture{persona/py-05-multiline-pem.txt}
+  \realrun{double-quoted multi-line value}
+
+  \vspace{0.4em}
+  {\footnotesize Newlines are preserved as \texttt{\textbackslash n}, and
+  \texttt{B=2} proves the parser resumed correctly on the line after the
+  closing quote --- it did not swallow the rest of the file.}
+\end{frame}
+
+\begin{frame}[fragile]{A JSON service account, single-quoted}
+  \capture{persona/py-07-multiline-json-sq.txt}
+  \realrun{single-quoted multi-line value}
+
+  \vspace{0.4em}
+  {\footnotesize \texttt{GOOGLE\_APPLICATION\_CREDENTIALS} as an inline value
+  works, provided you wrap it in \textbf{single} quotes.}
+\end{frame}
+
+\begin{frame}[fragile]{The one shape that does break}
+  \capture{persona/py-06-multiline-json-dq.txt}
+  \realrun{double-quoted, containing escaped \texttt{\textbackslash "}}
+
+  \vspace{0.4em}
+  \begin{trap}{The rule to remember}
+    A \textbf{double}-quoted multi-line value ends at the first inner
+    \texttt{"}, escaped or not. So JSON pasted inside double quotes fails.
+    \textbf{Wrap JSON in single quotes.} PEM has no inner quotes, so either
+    works.
+  \end{trap}
+
+  \vspace{0.3em}
+  {\footnotesize Exit \exittwo\ with a line number --- it fails loudly, which
+  is the right failure. Worth filing as a parser bug.}
+\end{frame}
+
+% =========================================================================
+\section{Every process, one source}
+
+\begin{frame}[fragile]{\cmd{cloud run} --- the Gunicorn/Celery family of bugs}
+\begin{lstlisting}[style=evnxcode]
+evnx cloud run -- gunicorn config.wsgi
+evnx cloud run -- uvicorn app.main:app --reload
+evnx cloud run -- celery -A app worker -l info
+evnx cloud run -- pytest
+\end{lstlisting}
+
+  \vspace{0.6em}
+  Web, worker, beat and tests all read the \textbf{same vault version}. The
+  ``worker has the old Stripe key'' incident cannot happen, because there is no
+  second file to fall behind.
+
+  \vspace{0.8em}
+  \begin{block}{Verified properties}
+    The secret is \textbf{absent from} \file{/proc/self/cmdline}, present in the
+    child's environment, and the child's exit code is returned unchanged ---
+    so it composes with \texttt{pytest} in CI.
+  \end{block}
+
+  \vspace{0.4em}
+  {\footnotesize For \emph{production}, use platform injection (Kubernetes),
+  not \cmd{cloud run}. It removes the plaintext file, not the master-password
+  prompt.}
+\end{frame}
+
+\begin{frame}[fragile]{\flag{-{}-include} narrows what the child sees}
+\begin{lstlisting}[style=evnxcode]
+# collectstatic needs config, not credentials
+evnx cloud run --include "APP_*" --include "STATIC_*" \
+  -- python manage.py collectstatic --noinput
+\end{lstlisting}
+
+  \vspace{0.6em}
+  \begin{block}{A detail worth trusting}
+    A filter that matches \textbf{nothing} is an \textbf{error}, not a silent
+    run with zero secrets. That distinction is the difference between a build
+    step that fails and a build step that quietly ships a broken image.
+  \end{block}
+\end{frame}
+
+% =========================================================================
+\section{Handing off to DevOps}
+
+\begin{frame}[fragile]{\cmd{convert -{}-to kubernetes}}
+  \capture{persona/py-04-k8s.txt}
+  \realrun{\texttt{stringData:} by default; \flag{-{}-base64} gives \texttt{data:}}
+
+  \vspace{0.3em}
+  {\footnotesize \textbf{Pipe it, never commit it.} This is plaintext. Feed it
+  to Sealed Secrets or External Secrets Operator.}
+\end{frame}
+
+\begin{frame}[fragile]{\cmd{migrate} generates commands --- it does not upload}
+  \capturepart{persona/ops-08-migrate-live-aws.txt}{1}{20}
+  \realrun{\texttt{evnx migrate -{}-to aws-secrets-manager} --- \emph{without} \flag{-{}-dry-run}}
+
+  \vspace{0.3em}
+  \begin{correction}{read the banner}
+    ``Generate destination commands from your \file{.env}''. Eight of nine
+    destinations \textbf{print the platform's own CLI commands and contact
+    nothing}. Only \texttt{github-actions} actually transfers. This is
+    deliberate --- operators review the commands before running them --- but
+    it surprised people when the summary used to say ``uploaded''.
+  \end{correction}
+\end{frame}
+
+\begin{frame}{Where the DevOps handoff is still manual}
+  \small
+  \begin{tabular}{@{}clp{6.4cm}@{}}
+    \toprule
+    & \textbf{Gap} & \textbf{Today's workaround} \\
+    \midrule
+    \partialmark & No ``compare vault vs AWS SM'' & export from AWS, \cmd{evnx diff} against the file \\
+    \partialmark & Web and worker Compose wiring  & \cmd{convert -{}-to docker-compose} for one shared block \\
+    \partialmark & pydantic \texttt{env\_prefix} awareness & \cmd{convert -{}-to json -{}-include "APP\_*"} to see what the class will receive \\
+    \unsolved & CI without a master password & machine identities are not built \\
+    \unsolved & Secrets printed in logs      & app concern --- \texttt{SecretStr}, logging filters \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.7em}
+  \saythis{``The CI one is the real blocker for adoption, and it is the number
+  two item on the roadmap. I will not pretend otherwise.''}
+\end{frame}
+
+% =========================================================================
+\section{Adoption}
+
+\begin{frame}[fragile]{Copy-paste: per service}
+\begin{lstlisting}[style=evnxcode]
+evnx init --blueprint django          # or fastapi, python
+evnx vault create billing-api --env development
+evnx cloud link billing-api/development && evnx cloud push
+
+# local: every process from one source
+evnx cloud run -- uvicorn app.main:app --reload
+evnx cloud run -- celery -A app worker -l info
+
+# quality gates (pre-commit + CI)
+evnx validate --strict --validate-formats
+evnx scan .
+evnx sync --check
+
+# hand-off
+evnx migrate --to aws-secrets-manager \
+  --secret-name prod/billing-api --dry-run
+evnx convert --to kubernetes > /tmp/secret.yaml   # review, never commit
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Pair it with typed settings --- both layers}
+\begin{lstlisting}[style=evnxcode,language=Python]
+class Settings(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_prefix="APP_", env_nested_delimiter="__")
+
+    debug: bool = False              # pydantic parses "false"
+    database_url: PostgresDsn        # pydantic catches postgress://
+    stripe_key: SecretStr            # pydantic keeps it out of repr()
+\end{lstlisting}
+
+  \vspace{0.8em}
+  \begin{block}{Note what each layer covers}
+    \texttt{PostgresDsn} catches the scheme typo that \cmd{validate} lets
+    through. \texttt{SecretStr} covers the logging gap evnx marks
+    \unsolved. \textbf{The gaps in one are the strengths of the other} ---
+    which is the argument for adopting both.
+  \end{block}
+\end{frame}
+
+\begin{frame}{The scorecard, honestly}
+  \begin{center}
+  \begin{tabular}{@{}clp{6.2cm}@{}}
+    \toprule
+    & \textbf{Count} & \textbf{Items} \\
+    \midrule
+    \solved     & 14 & onboarding, blueprints, drift, CSPRNG secrets, boolean trap, URL shape, Docker/localhost, \cmd{cloud run}, test env, code scanning, weak secrets, gitignore, K8s, Compose \\
+    \partialmark & 6 & web/worker wiring, pydantic prefixes, rotation, AWS comparison, CI credentials, build-only env \\
+    \unsolved   & 1 & secrets in logs \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+
+  \vspace{0.6em}
+  \begin{block}{Revised from the source material}
+    Multi-line values were listed \unsolved. They work, with one quoting
+    caveat --- so the count moved from 2 unsolved to 1.
+  \end{block}
+\end{frame}
+
+\begin{frame}{What is coming, in priority order}
+  \small
+  \begin{tabular}{@{}clp{5.6cm}@{}}
+    \toprule
+    & \textbf{Feature} & \textbf{Fixes} \\
+    \midrule
+    1 & Schema import --- read a pydantic \texttt{BaseSettings} and validate required keys and types from it & the staging-crash incident \\
+    2 & Escaped quotes in double-quoted multi-line values & the JSON parse failure \\
+    3 & Shared / inherited vaults (\texttt{base} + service) & three services, one DB URL \\
+    4 & \cmd{diff -{}-against aws:prod/billing-api} & vault vs Secrets Manager \\
+    5 & Machine identity for CI (no master password) & pipeline adoption \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}[plain]
+  \vfill
+  \begin{center}
+    {\LARGE\textbf{Questions}}\\[1.2em]
+    {\small \url{https://www.evnx.dev/guides} · \url{https://github.com/urwithajit9/evnx}}\\[0.8em]
+    {\footnotesize\textcolor{evnxMuted}{evnx 0.5.2 · every terminal block is a real run}}
+  \end{center}
+  \vfill
+\end{frame}
+
+\end{document}

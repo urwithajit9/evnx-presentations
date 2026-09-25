@@ -1,0 +1,5 @@
+$ evnx convert --env .env.pem --to json
+Error: Convert command failed: Failed to parse environment file: '.env.pem': Invalid format at line 5: missing '=' separator
+
+No verdict: evnx did not finish. This is not a clean result.
+exit=2

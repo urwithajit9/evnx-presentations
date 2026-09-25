@@ -1,0 +1,11 @@
+$ evnx validate --format json | jq "{status, summary}"
+{
+  "status": "passed",
+  "summary": {
+    "errors": 0,
+    "warnings": 2,
+    "style": 0,
+    "fixed_count": 0
+  }
+}
+exit=0

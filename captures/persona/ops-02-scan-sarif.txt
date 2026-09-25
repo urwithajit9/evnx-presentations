@@ -1,0 +1,59 @@
+$ evnx scan . --format sarif
+{
+  "$schema": "https://json.schemastore.org/sarif-2.1.0.json",
+  "runs": [
+    {
+      "results": [
+        {
+          "hostedViewerUri": "https://dashboard.stripe.com/apikeys",
+          "level": "error",
+          "locations": [
+            {
+              "physicalLocation": {
+                "artifactLocation": {
+                  "uri": "./.env"
+                },
+                "region": {
+                  "startLine": 2
+                }
+              }
+            }
+          ],
+          "message": {
+            "text": "Stripe Secret Key (LIVE) detected in STRIPE_SECRET_KEY"
+          },
+          "partialFingerprints": {
+            "evnxSecretV1": "./.env::STRIPE_SECRET_KEY::secret/stripe-secret-key-live"
+          },
+          "ruleId": "secret/stripe-secret-key-live"
+        }
+      ],
+      "tool": {
+        "driver": {
+          "informationUri": "https://www.evnx.dev/guides/commands/scan",
+          "name": "evnx scan",
+          "rules": [
+            {
+              "defaultConfiguration": {
+                "level": "error"
+              },
+              "fullDescription": {
+                "text": "evnx scan matched Stripe Secret Key (LIVE) in a file that may be committed."
+              },
+              "helpUri": "https://www.evnx.dev/guides/commands/scan",
+              "id": "secret/stripe-secret-key-live",
+              "name": "StripeSecretKey(LIVE)",
+              "shortDescription": {
+                "text": "Stripe Secret Key (LIVE)"
+              }
+            }
+          ],
+          "version": "0.5.2"
+        }
+      }
+    }
+  ],
+  "version": "2.1.0"
+}
+  Docs: https://www.evnx.dev/guides/commands/scan
+exit=1

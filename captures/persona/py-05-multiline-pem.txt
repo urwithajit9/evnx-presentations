@@ -1,0 +1,8 @@
+$ evnx convert --env t1.env --to json
+{
+  "A": "1",
+  "PRIVATE_KEY": "-----BEGIN PRIVATE KEY-----\nMIIEvQ\n-----END PRIVATE KEY-----",
+  "B": "2"
+}
+  Docs: https://www.evnx.dev/guides/commands/convert
+exit=0

@@ -1,0 +1,26 @@
+$ evnx doctor
+
+  evnx doctor  Diagnosing environment setup
+
+
+  ✗  Validate .env file existence, security, and syntax
+     .env is NOT in .gitignore (security risk)
+
+  !  Check .env.example exists and is Git-tracked
+     .env.example is not tracked in Git — run: git add .env.example
+
+  ·  Detect project type and validate dependencies
+     No recognized project configuration
+
+  ·  Check for Docker configuration files
+     No Docker configuration detected
+
+  !  Check file permissions for sensitive files
+     Permissions: 664 (recommended: 600)
+
+  1 error  ·  2 warnings
+
+  →  2 issues evnx doctor --fix can repair:
+     ·  Validate .env file existence, security, and syntax
+     ·  Check file permissions for sensitive files
+exit=1

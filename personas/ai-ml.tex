@@ -1,0 +1,393 @@
+% ===========================================================================
+%  evnx for AI / ML Engineers  —  Python, Jupyter, GPU boxes, Rust inference
+%  Persona SM.  Build: pdflatex -interaction=nonstopmode ai-ml.tex
+% ===========================================================================
+\documentclass[aspectratio=169,10pt]{beamer}
+
+\newcommand{\capturedir}{../captures}
+\input{persona-preamble}
+
+\title{evnx for AI and ML engineers}
+\subtitle{Expensive keys, disposable machines, and notebooks that remember}
+\date{}
+
+\begin{document}
+
+\begin{frame}[plain]
+  \titlepage
+  \audience{Python · Jupyter · LLM APIs · rented GPUs · Slurm · Rust inference}
+  \begin{center}\footnotesize
+  \textcolor{evnxMuted}{evnx 0.5.2. Every terminal block is a real run,
+  including the two where evnx misses.}
+  \end{center}
+\end{frame}
+
+% =========================================================================
+\begin{frame}{This deck in one slide}
+  \begin{block}{Your threat model is different from everyone else's}
+    A leaked web API key is an incident. A leaked \textbf{LLM} key is an
+    incident \emph{and} an invoice. And your secrets live on machines you
+    rent by the hour and destroy by lunchtime.
+  \end{block}
+
+  \vspace{0.6em}
+  \begin{block}{Two things you must know before you trust \cmd{scan}}
+    \begin{enumerate}
+      \item \textbf{\file{.ipynb} files are not scanned at all.} Not
+            low-confidence --- not scanned.
+      \item The OpenAI detector matches the \textbf{legacy} key format.
+            Modern \texttt{sk-proj-} keys fall through to generic entropy at
+            \textbf{low} severity, which \flag{-{}-severity high} filters out.
+    \end{enumerate}
+  \end{block}
+  \saythis{Both are demoed. Do not soften them --- this audience will test it.}
+\end{frame}
+
+\begin{frame}{Contents}\tableofcontents[hideallsubsections]\end{frame}
+
+% =========================================================================
+\section{Three things that already happened to you}
+
+\begin{frame}{A month in the life}
+  \small
+  \begin{block}{The notebook}
+    You paste \texttt{OPENAI\_API\_KEY="sk-..."} into a cell ``just to test'',
+    run it, commit the notebook --- \textbf{with the output cell} still showing
+    the key. Three days later the provider emails about unusual usage.
+  \end{block}
+
+  \begin{block}{The GPU boxes}
+    You rent two machines for a fine-tune and \texttt{scp} your laptop
+    \file{.env} to both, including production AWS keys you did not need. The
+    machines are destroyed --- but a copy lives on in a teammate's home
+    directory on the Slurm cluster.
+  \end{block}
+
+  \begin{block}{The intern}
+    Six weeks, needs the vector DB and W\&B keys. You share your personal keys
+    over chat. When they leave, nobody rotates anything.
+  \end{block}
+\end{frame}
+
+\begin{frame}{What evnx changes, per incident}
+  \small
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    \textbf{Incident} & \textbf{Mechanism} & \textbf{Verdict} \\
+    \midrule
+    Notebook commit  & \cmd{scan} in pre-commit & \unsolved\ for \file{.ipynb} --- see slide 8 \\
+    GPU box copies   & \cmd{cloud run} --- no file written & \solved \\
+    Intern access    & dedicated vault + \cmd{vault revoke} & \partialmark\ no expiry \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{1em}
+  \begin{block}{The one that generalises}
+    \cmd{evnx cloud run -{}- python train.py} means \textbf{there is no
+    \file{.env} to leave behind} on a machine you are about to destroy, or on a
+    shared cluster filesystem. That is the single highest-value change for this
+    audience and it works today.
+  \end{block}
+\end{frame}
+
+% =========================================================================
+\section{The notebook problem}
+
+\begin{frame}[fragile]{Setup: one key, two identical files}
+\begin{lstlisting}[style=evnxcode]
+notebooks/explore.ipynb    # a real notebook with the key in a code cell
+notebooks/explore.json     # byte-identical copy, different extension
+\end{lstlisting}
+
+  \vspace{0.6em}
+  Same bytes. Same key. The only difference is the file extension.
+
+  \vspace{0.8em}
+  \saythis{``What should a secret scanner do here?'' --- let them say ``flag both''.}
+\end{frame}
+
+\begin{frame}[fragile]{\cmd{evnx scan notebooks/}}
+  \capture{persona/ml-01-scan-notebooks.txt}
+  \realrun{two identical files, one finding}
+
+  \vspace{0.4em}
+  \begin{trap}{Read the ``scanning'' line}
+    It scanned \file{explore.json}. It never opened \file{explore.ipynb}.
+    \texttt{ipynb} is missing from the scannable-extension allowlist at
+    \file{src/commands/scan/filters.rs:284}. Tracked as \textbf{NEW-2}.
+  \end{trap}
+\end{frame}
+
+\begin{frame}[fragile]{And naming the notebook directly does not help}
+  \capture{persona/ml-02-scan-ipynb.txt}
+  \realrun{the notebook, named explicitly --- exit \exitzero}
+
+  \vspace{0.4em}
+  {\footnotesize ``0 files scanned'' and a green check. If your pre-commit hook
+  is \cmd{evnx scan notebooks/}, it has been passing without doing anything.}
+
+  \vspace{0.5em}
+  \begin{block}{Workaround, today}
+    \begin{center}\ttfamily\scriptsize
+    find . -name '*.ipynb' -exec sh -c 'cp "\$1" "\$1.json"' \_ \{\} \textbackslash; \&\& evnx scan . ; \\
+    find . -name '*.ipynb.json' -delete
+    \end{center}
+    \vspace{0.3em}
+    Ugly, but it is the difference between a scanner and a green tick.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Do this regardless of which scanner you use}
+  \begin{center}\large\ttfamily
+  pip install nbstripout \&\& nbstripout -{}-install
+  \end{center}
+
+  \vspace{1em}
+  \begin{block}{Why this is first, not fifth}
+    The notebook incident is not really ``a key in source''. It is
+    \textbf{a key in a saved output cell}. Stripping outputs removes the whole
+    class --- and it works whether or not any scanner understands
+    \file{.ipynb}.
+  \end{block}
+
+  \vspace{0.8em}
+  \saythis{Recommending the non-evnx tool here is what buys you credibility for
+  the rest of the deck.}
+\end{frame}
+
+% =========================================================================
+\section{The detector problem}
+
+\begin{frame}[fragile]{Two OpenAI keys, one file}
+  \capturepart{persona/ml-06-openai-key-formats.txt}{1}{18}
+  \realrun{line 1 is a legacy \texttt{sk-} key, line 2 is a \texttt{sk-proj-} key}
+\end{frame}
+
+\begin{frame}{Why one is \texttt{high} and the other is \texttt{low}}
+  \begin{center}\ttfamily\small
+  pattern: r"sk-[0-9a-zA-Z]\{48\}"
+  \end{center}
+  \begin{center}\footnotesize\textcolor{evnxMuted}{src/utils/patterns.rs:106}\end{center}
+
+  \vspace{0.8em}
+  A modern project key is \texttt{sk-proj-} followed by a mix that includes
+  \texttt{-} and \texttt{\_}. The character class is alphanumeric only, so the
+  hyphen after \texttt{proj} ends the match. The key is then caught only by the
+  generic Shannon-entropy detector, at \textbf{low} confidence.
+
+  \vspace{0.8em}
+  \begin{trap}{The consequence for your CI}
+    \cmd{evnx scan . -{}-severity high} --- the sensible setting for a blocking
+    gate --- \textbf{will not report a modern OpenAI key}. We verified it:
+    ``✓ No secrets detected'', exit \exitzero.
+  \end{trap}
+\end{frame}
+
+\begin{frame}[fragile]{Proof, so nobody has to take my word for it}
+  \capture{persona/ml-05-scan-severity-high.txt}
+  \realrun{the same notebook directory, \flag{-{}-severity high}}
+
+  \vspace{0.4em}
+  \begin{block}{What to do this week}
+    Add your own patterns rather than waiting:
+    \vspace{0.3em}
+    \begin{center}\ttfamily\scriptsize
+    evnx scan . -{}-pattern 'sk-proj-[A-Za-z0-9\_-]\{40,\}' \textbackslash \\
+    \ \ \ \ \ \ \ \ \ \ \ \ \ -{}-pattern 'hf\_[A-Za-z0-9]\{30,\}' \textbackslash \\
+    \ \ \ \ \ \ \ \ \ \ \ \ \ -{}-pattern 'r8\_[A-Za-z0-9]\{30,\}'
+    \end{center}
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{The other half: name-based detection does work}
+  \capturepart{persona/ml-03-scan-env.txt}{1}{16}
+  \realrun{\texttt{evnx scan .env}}
+
+  \vspace{0.3em}
+  {\footnotesize Note the annotation: \emph{``flagged by variable name --- the
+  value was not checked''}. In a \file{.env} the key \emph{name} carries the
+  signal, so \texttt{OPENAI\_API\_KEY} and \texttt{HF\_TOKEN} are both caught
+  at \texttt{high} even though neither value matched a pattern. The gap is in
+  \textbf{source files and notebooks}, where there is no variable name to lean on.}
+\end{frame}
+
+% =========================================================================
+\section{Many machines, no files}
+
+\begin{frame}[fragile]{The GPU box workflow}
+\begin{lstlisting}[style=evnxcode]
+# on the laptop, once
+evnx vault create llm-research --env dev
+evnx cloud link llm-research/dev && evnx cloud push
+
+# on every rented box, every cluster node -- no scp, no file
+evnx cloud run -- python train.py --config cfg/exp42.yaml
+evnx cloud run -- jupyter lab
+evnx cloud run -- streamlit run app.py
+evnx cloud run -- cargo run          # the Rust inference service
+\end{lstlisting}
+
+  \vspace{0.6em}
+  \begin{block}{Blast radius, by design}
+    \begin{tabular}{@{}ll@{}}
+      \texttt{llm-research/dev}  & personal keys, low spend limits \\
+      \texttt{rag-api/prod}      & production keys, few members \\
+      \texttt{demos/public}      & keys that are safe for interns and demos \\
+    \end{tabular}
+  \end{block}
+  {\footnotesize Three vaults is the whole intern problem solved structurally ---
+  they get \texttt{demos/public} and never see the other two.}
+\end{frame}
+
+\begin{frame}{Caveats worth stating before someone finds them}
+  \small
+  \begin{itemize}
+    \item \textbf{\cmd{cloud run} still prompts for the master password} on the
+          remote box. On a shared machine that is a real exposure --- machine
+          identities are not built yet. Item 4 on the roadmap.
+    \item \textbf{Jupyter kernels started elsewhere} do not inherit the
+          environment. \cmd{cloud run -{}- jupyter lab} injects into the
+          \emph{parent}; a kernel launched by a different supervisor will not
+          see it.
+    \item \textbf{Colab and hosted notebooks:} evnx cannot run there in any
+          useful way. Use the platform's own secret store.
+    \item \textbf{Slurm:} \cmd{cloud run -{}- srun python train.py} works from
+          the login node, but whether the environment propagates depends on
+          your cluster's configuration.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}[fragile]{The AI-assistant angle, which lands with this room}
+  \begin{block}{The actual argument}
+    A coding assistant with filesystem access reads your working tree. If
+    there is no \file{.env} in it, there is nothing to read.
+  \end{block}
+
+  \vspace{0.6em}
+  \begin{center}\large\cmd{evnx cloud run -{}- python app.py}\end{center}
+
+  \vspace{0.8em}
+  \begin{trap}{Do not oversell it}
+    An assistant that can run \emph{commands} can run \cmd{evnx cloud pull}.
+    This removes the passive read, not the active one.
+  \end{trap}
+\end{frame}
+
+% =========================================================================
+\section{Reproducibility}
+
+\begin{frame}[fragile]{``Which keys and config did run \#42 use?''}
+  \cmd{evnx cloud history} lists a vault's versions, newest first. It is
+  \textbf{read-only}: no password, no decryption, no blob download --- so it is
+  safe to call from inside a training script.
+
+  \vspace{0.7em}
+\begin{lstlisting}[style=evnxcode,language=Python]
+import subprocess, wandb
+
+hist = subprocess.check_output(
+    ["evnx", "cloud", "history", "--limit", "1"], text=True)
+wandb.config.update({"env_vault_head": hist.strip()})
+\end{lstlisting}
+
+  \vspace{0.5em}
+  \begin{trap}{There is no \flag{-{}-format json} on \cmd{cloud status} or \cmd{cloud history}}
+    Both are human-formatted only, so you are parsing text. A machine-readable
+    status is item 6 on the roadmap --- until then, log the raw string rather
+    than pretending to extract a field.
+  \end{trap}
+\end{frame}
+
+\begin{frame}[fragile]{Custom detectors: the team-wide version}
+  \capturepart{persona/ml-07-custom-pattern-toml.txt}{1}{20}
+  \realrun{\texttt{[[scan.patterns]]} in \file{.evnx.toml}}
+
+  \vspace{0.3em}
+  {\footnotesize \flag{-{}-pattern} is for a one-off. \file{.evnx.toml} is
+  committed, so the whole team scans with the same rules --- and both sets
+  apply together. Note evnx names the unknown \texttt{severity} key and says it
+  ignored it, rather than dropping it quietly.}
+\end{frame}
+
+\begin{frame}[fragile]{What validate is good for here}
+  \capture{persona/ml-04-validate.txt}
+  \realrun{a research \file{.env} with one unreplaced placeholder}
+
+  \vspace{0.4em}
+  {\footnotesize Catching \texttt{your\_wandb\_key\_here} at commit time is
+  worth more than it sounds: the alternative is finding out forty minutes into
+  a training run when the logger 401s.}
+\end{frame}
+
+% =========================================================================
+\section{Adoption}
+
+\begin{frame}[fragile]{Copy-paste}
+\begin{lstlisting}[style=evnxcode]
+# vaults by blast radius
+evnx vault create llm-research --env dev
+evnx vault create rag-api --env prod
+evnx vault create demos --env public
+
+# every machine: no plaintext file
+evnx cloud run -- jupyter lab
+evnx cloud run -- python train.py --config cfg/exp42.yaml
+
+# guardrails
+pip install nbstripout && nbstripout --install     # do this first
+evnx scan . --pattern 'sk-proj-[A-Za-z0-9_-]{40,}' \
+            --pattern 'hf_[A-Za-z0-9]{30,}'
+
+# deploy the RAG API
+evnx convert --to kubernetes    # or --to gcp-secrets / --to aws-secrets
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}{The scorecard, revised}
+  \begin{center}
+  \begin{tabular}{@{}clp{6.2cm}@{}}
+    \toprule
+    & \textbf{Count} & \textbf{Items} \\
+    \midrule
+    \solved     & 6 & many machines, vault-per-blast-radius, Streamlit/Gradio, leak prevention in \emph{source}, no-file-on-disk, K8s/GCP deploy \\
+    \partialmark & 11 & experiment config, Jupyter kernels, placeholders, Rust binaries, credentialed URIs, rotation, intern access, Docker images, Slurm, run provenance, \textbf{file secrets} \\
+    \unsolved   & 3 & hosted notebooks, HF Spaces, \textbf{\file{.ipynb} scanning} \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+
+  \vspace{0.5em}
+  \begin{correction}{two moves from the source material}
+    \file{.ipynb} scanning was listed \solved. It is \unsolved\ --- verified.
+    \textbf{File secrets} (service-account JSON) were listed \unsolved; inline
+    multi-line JSON \emph{does} parse if single-quoted, so it is \partialmark.
+  \end{correction}
+\end{frame}
+
+\begin{frame}{What is coming, in priority order}
+  \small
+  \begin{tabular}{@{}clp{5.6cm}@{}}
+    \toprule
+    & \textbf{Feature} & \textbf{Fixes the slide on} \\
+    \midrule
+    P0 & Scan explicitly-named excluded/unscannable paths & ``0 files scanned'' \\
+    1  & AI detector pack (HF, W\&B, Pinecone, LangSmith, Cohere, Replicate, Groq) + modern OpenAI format & \flag{-{}-severity high} missing keys \\
+    2  & \file{.ipynb}-aware scanning (sources \emph{and} outputs) & the notebook \\
+    3  & File secrets materialised to temp files by \cmd{cloud run} & \texttt{GOOGLE\_APPLICATION\_CREDENTIALS} \\
+    4  & Machine tokens that decrypt one vault & GPU boxes, Slurm \\
+    5  & HF Spaces / Modal / Replicate convert targets & demo deploys \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}[plain]
+  \vfill
+  \begin{center}
+    {\LARGE\textbf{Questions}}\\[1.2em]
+    {\small \url{https://www.evnx.dev/guides} · \url{https://github.com/urwithajit9/evnx}}\\[0.8em]
+    {\footnotesize\textcolor{evnxMuted}{evnx 0.5.2 · every terminal block is a real run}}
+  \end{center}
+  \vfill
+\end{frame}
+
+\end{document}

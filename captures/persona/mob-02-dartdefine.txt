@@ -1,0 +1,8 @@
+$ evnx convert --to json --exclude "*_SECRET*"
+{
+  "EXPO_PUBLIC_API_URL": "https://api.acme.io",
+  "EXPO_PUBLIC_MAPS_KEY": "AIzaSyD-1a2b3c4d5e6f7g8h9i0jKlMnOpQrStU",
+  "ANDROID_KEYSTORE_PASSWORD": "hunter2correcthorse"
+}
+  Docs: https://www.evnx.dev/guides/commands/convert
+exit=0

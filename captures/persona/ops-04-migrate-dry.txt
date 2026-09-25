@@ -1,0 +1,12 @@
+$ evnx migrate --to aws-secrets-manager --dry-run
+
+  evnx migrate  Generate destination commands from your .env
+
+
+✓ Loaded 4 secrets from env-file
+Error: AWS secret name (e.g. prod/myapp/config) is required for this destination. Pass `--secret-name`.
+  --dry-run still needs it: without it evnx would print a command
+  with a placeholder where the name should be.
+
+No verdict: evnx did not finish. This is not a clean result.
+exit=2

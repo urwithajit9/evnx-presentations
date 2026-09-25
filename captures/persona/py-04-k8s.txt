@@ -1,0 +1,16 @@
+$ evnx convert --to kubernetes
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secrets
+type: Opaque
+stringData:
+  DEBUG: False
+  SECRET_KEY: your_secret_key_here
+  DATABASE_URL: postgresql://u:p@localhost:5432/app
+  CELERY_BROKER_URL: redis://localhost:6379/0
+  STRIPE_SECRET_KEY: changeme
+  SENTRY_DSN: notaurl
+
+  Docs: https://www.evnx.dev/guides/commands/convert
+exit=0

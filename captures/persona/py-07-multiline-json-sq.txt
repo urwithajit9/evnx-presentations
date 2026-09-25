@@ -1,0 +1,8 @@
+$ evnx convert --env t3.env --to json
+{
+  "A": "1",
+  "GCP": "{\n  \"type\": \"service_account\"\n}",
+  "B": "2"
+}
+  Docs: https://www.evnx.dev/guides/commands/convert
+exit=0

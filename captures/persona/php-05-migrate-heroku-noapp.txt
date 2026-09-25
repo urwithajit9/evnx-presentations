@@ -1,0 +1,12 @@
+$ evnx migrate --to heroku --dry-run
+
+  evnx migrate  Generate destination commands from your .env
+
+
+✓ Loaded 7 secrets from env-file
+Error: Heroku app name is required for this destination. Pass `--heroku-app`.
+  --dry-run still needs it: without it evnx would print a command
+  with a placeholder where the name should be.
+
+No verdict: evnx did not finish. This is not a clean result.
+exit=2

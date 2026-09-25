@@ -1,0 +1,15 @@
+$ evnx validate        # Dockerfile now present
+
+  evnx validate  Check environment configuration
+
+  !  DATABASE_URL uses localhost/127.0.0.1
+     .env
+     →  In Docker, use service name instead (e.g., db:5432)
+
+  !  REDIS_URL uses localhost/127.0.0.1
+     .env
+     →  In Docker, use service name instead (e.g., db:5432)
+
+  2 warnings
+  Docs: https://www.evnx.dev/guides/commands/validate
+exit=0

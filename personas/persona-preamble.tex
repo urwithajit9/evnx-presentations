@@ -1,0 +1,50 @@
+% ---------------------------------------------------------------------------
+%  Shared preamble for the seven audience decks.
+%
+%  Each deck does, before the document body starts:
+%     \newcommand{\capturedir}{../captures}
+%     \input{persona-preamble}
+%
+%  \capturedir points at ../captures so both pools resolve:
+%     \capture{24-scan.txt}              — the original v0.5.0 captures
+%     \capture{persona/fe-01-scan-dist.txt} — captures recorded for these decks
+% ---------------------------------------------------------------------------
+
+\input{../common/evnx-preamble}
+
+% ---- provenance ------------------------------------------------------------
+% The original decks were pinned to tag v0.5.0 (85a52c3). Everything captured
+% for the persona decks was re-run against 0.5.2, so the footline differs.
+\renewcommand{\verifiedon}{\tiny\textcolor{evnxMuted}{verified against evnx 0.5.2 --- real run, not transcribed}}
+
+% ---- audience badge on the title slide ------------------------------------
+\newcommand{\audience}[1]{%
+  \begin{center}\small\textcolor{evnxAccent}{\textbf{Audience: #1}}\end{center}}
+
+% ---- verdict chips ---------------------------------------------------------
+\newcommand{\solved}{\textcolor{evnxOk}{\ensuremath{\checkmark}}}
+\newcommand{\partialmark}{\textcolor{evnxWarn}{\textbf{\textasciitilde}}}
+\newcommand{\unsolved}{\textcolor{evnxErr}{\ensuremath{\times}}}
+
+% ---- a correction block: something the source material got wrong -----------
+\newenvironment{correction}[1]{%
+  \begin{alertblock}{\small Correction --- #1}\small}{\end{alertblock}}
+
+% ---- a trap block: works in the demo, fails in real use --------------------
+\newenvironment{trap}[1]{%
+  \setbeamercolor{block title}{bg=evnxWarn,fg=white}%
+  \setbeamercolor{block body}{bg=evnxWarn!8}%
+  \begin{block}{\small #1}\small}{\end{block}}
+
+% ---- the persona card ------------------------------------------------------
+\newcommand{\personacard}[4]{%
+  \begin{block}{#1}
+    \small
+    \textbf{Stack:} #2 \\
+    \textbf{Ships:} #3 \\
+    \textbf{Loses time to:} #4
+  \end{block}}
+
+% ---- speaker note (rendered small and muted, not hidden) -------------------
+\newcommand{\saythis}[1]{%
+  \vspace{0.4em}{\footnotesize\textcolor{evnxMuted}{\textit{Say:} #1}}}

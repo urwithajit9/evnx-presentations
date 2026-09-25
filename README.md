@@ -1,14 +1,33 @@
 # evnx presentations — Beamer sources
 
-Three decks, built from **real execution output** captured from `evnx 0.5.0`
-at tag `v0.5.0` (`85a52c3`). No output in these slides was typed by hand; every
-terminal block is `\input` from a file in `captures/`.
+Ten decks, built from **real execution output**. No output in these slides was
+typed by hand; every terminal block is `\input` from a file in `captures/`.
+
+**Three general decks**, captured from `evnx 0.5.0` at tag `v0.5.0` (`85a52c3`):
 
 | Deck | Audience | Frames |
 |---|---|---|
 | [`user-guide/`](user-guide) | Users — every command, syntax, flags, use cases | 88 |
 | [`use-cases/`](use-cases) | Developer advocacy — workflows combining commands + cloud sync | 26 |
 | [`architecture/`](architecture) | Rust contributors — ecosystem, internals, testing, conventions | 26 |
+
+**Seven audience decks** in [`personas/`](personas), captured from `evnx 0.5.2`.
+One per stack, because the same command lands differently depending on what the
+room ships:
+
+| Deck | Room | Headline demo |
+|---|---|---|
+| [`frontend.tex`](personas/frontend.tex) | Vite/React, Next.js, Vercel | `scan dist/` reports 0 files over a live key |
+| [`python-backend.tex`](personas/python-backend.tex) | Django, FastAPI, Celery | `validate` on a real Django `.env` |
+| [`fullstack-java.tex`](personas/fullstack-java.tex) | Spring Boot + Vue + React monorepo | `--prefix` generating three names from one base |
+| [`ai-ml.tex`](personas/ai-ml.tex) | Python, Jupyter, GPU boxes | two OpenAI keys, one file, one detected |
+| [`devops.tex`](personas/devops.tex) | GitHub Actions, K8s, Terraform | the exit contract and SARIF fingerprints |
+| [`php-agency.tex`](personas/php-agency.tex) | Laravel/Symfony agency | `APP_DEBUG=true` in production passes clean |
+| [`mobile.tex`](personas/mobile.tex) | Expo, Flutter, EAS | `--exclude` letting the keystore password through |
+
+[`personas/AUDIENCE_PLAYBOOK.md`](personas/AUDIENCE_PLAYBOOK.md) is the
+presenter's guide — opening line, lead demo, the objection you will get, and the
+answer. Read it before the deck.
 
 ---
 
@@ -66,14 +85,18 @@ evnx-presentations/
 ├── check-tex.py              structural validator (no LaTeX needed)
 ├── common/
 │   └── evnx-preamble.tex     theme, colours, listings style, glyph mapping
-├── captures/                 97 real runs (59 referenced; the rest are
-│                             source material for future slides)
+├── captures/                 101 real runs from v0.5.0
+│   └── persona/              47 more, recorded against 0.5.2
 ├── user-guide/
 │   ├── main.tex              the combined deck
 │   ├── commands/cmd-*.tex    16 files, frames only, no preamble
 │   └── standalone/*.tex      16 one-command decks that build alone
 ├── use-cases/main.tex
-└── architecture/main.tex
+├── architecture/main.tex
+└── personas/
+    ├── persona-preamble.tex  shared by the seven audience decks
+    ├── AUDIENCE_PLAYBOOK.md  how to present to each room
+    └── <audience>.tex        7 standalone decks
 ```
 
 ### Per-command decks

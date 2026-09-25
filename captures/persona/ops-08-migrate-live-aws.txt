@@ -1,0 +1,44 @@
+$ evnx migrate --to aws-secrets-manager --secret-name prod/billing/config
+
+  evnx migrate  Generate destination commands from your .env
+
+
+✓ Loaded 5 secrets from env-file
+
+· AWS Secrets Manager migration
+
+Run one of the following commands:
+
+# Create a new secret:
+aws secretsmanager create-secret \
+  --name prod/billing/config \
+  --secret-string '{
+  "DATABASE_URL": "postgresql://u:p@db.internal:5432/app",
+  "STRIPE_SECRET_KEY": "sk_live_51H8xQ2KZvNbGtRsPmWcYdLfE9AjXoTuV",
+  "SENTRY_DSN": "your_sentry_dsn_here",
+  "FEATURE_X_URL": "https://x.acme.io",
+  "DEBUG": "True"
+}'
+
+# Or update an existing secret:
+aws secretsmanager update-secret \
+  --secret-id prod/billing/config \
+  --secret-string '{
+  "DATABASE_URL": "postgresql://u:p@db.internal:5432/app",
+  "STRIPE_SECRET_KEY": "sk_live_51H8xQ2KZvNbGtRsPmWcYdLfE9AjXoTuV",
+  "SENTRY_DSN": "your_sentry_dsn_here",
+  "FEATURE_X_URL": "https://x.acme.io",
+  "DEBUG": "True"
+}'
+
+Summary:
+  ✓  5 command(s) generated
+     nothing has been uploaded — run the commands above
+
+Next steps:
+  1. Run the printed `aws secretsmanager` command.
+  2. Grant IAM roles/users access to the new secret.
+  3. Update your application to read from Secrets Manager.
+  4. Remove or encrypt your local .env file.
+  Docs: https://www.evnx.dev/guides/commands/migrate
+exit=0

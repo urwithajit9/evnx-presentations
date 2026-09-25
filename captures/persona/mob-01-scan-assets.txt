@@ -1,0 +1,27 @@
+$ evnx scan assets/
+
+  evnx scan  Checking for exposed secrets
+
+  scanning assets/.env
+
+  ·  High-entropy string (possible secret)       low
+     assets/.env:2 (EXPO_PUBLIC_MAPS_KEY)  AIza…rStU
+
+  ✗  Stripe Secret Key (LIVE)                    high
+     assets/.env:3 (BACKEND_SIGNING_SECRET)  sk_l…oTuV
+     !  matches a live key format, not a placeholder
+     →  revoke at https://dashboard.stripe.com/apikeys
+
+  ✗  Sensitive config key: ANDROID_KEYSTORE_PASSWORD  high
+     assets/.env:4 (ANDROID_KEYSTORE_PASSWORD)  hunt…orse
+     ·  flagged by variable name — the value was not checked
+
+  3 findings  ·  2 high  ·  1 low
+
+
+Next steps:
+  1. Revoke or rotate the keys above — assume they are compromised
+  2. Remove them from history: git filter-repo --path .env --invert-paths
+  3. Force push, after coordinating with everyone who has a clone
+  Docs: https://www.evnx.dev/guides/commands/scan
+exit=1

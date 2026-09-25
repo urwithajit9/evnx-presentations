@@ -1,0 +1,9 @@
+$ evnx scan dist/bundle.js
+
+  evnx scan  Checking for exposed secrets
+
+  ✓  No secrets detected
+
+  0 files scanned
+  Docs: https://www.evnx.dev/guides/commands/scan
+exit=0

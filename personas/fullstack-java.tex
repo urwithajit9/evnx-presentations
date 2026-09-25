@@ -1,0 +1,399 @@
+% ===========================================================================
+%  evnx for Full-stack / Java Developers  —  Spring Boot + Vue + React monorepo
+%  Persona RRP.  Build: pdflatex -interaction=nonstopmode fullstack-java.tex
+% ===========================================================================
+\documentclass[aspectratio=169,10pt]{beamer}
+
+\newcommand{\capturedir}{../captures}
+\input{persona-preamble}
+
+\title{evnx for full-stack teams}
+\subtitle{Spring Boot, Vue and React in one repo --- three prefixes, one URL}
+\date{}
+
+\begin{document}
+
+\begin{frame}[plain]
+  \titlepage
+  \audience{Spring Boot 3 · Vue 3 + Vite · React (CRA) · monorepo · Kubernetes}
+  \begin{center}\footnotesize
+  \textcolor{evnxMuted}{evnx 0.5.2. Every terminal block is a real run.}
+  \end{center}
+\end{frame}
+
+% =========================================================================
+\begin{frame}{This deck in one slide}
+  \begin{block}{Your daily annoyance has a clean fix}
+    Config trapped in someone's IntelliJ run configuration, onboarded by
+    screenshot. \cmd{evnx cloud run -{}- ./mvnw spring-boot:run} ends that,
+    today, with no change to your application code.
+  \end{block}
+
+  \vspace{0.7em}
+  \begin{block}{Your structural problem does not}
+    Three apps, three prefixes, one API URL defined three times. evnx has
+    \textbf{no monorepo model and no cross-vault references}. You will run it
+    per directory and keep the duplication --- or generate the prefixed names
+    from one base, which we will demo.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Contents}\tableofcontents[hideallsubsections]\end{frame}
+
+% =========================================================================
+\section{A day in the monorepo}
+
+\begin{frame}{Three things, one afternoon}
+  \small
+  \begin{block}{The new laptop}
+    The backend will not start: \texttt{DB\_PASSWORD} lives in a colleague's
+    IntelliJ run configuration, which is not in git. You copy twelve variables
+    by hand from a screenshot.
+  \end{block}
+
+  \begin{block}{The URL that moved}
+    You update \file{backend/application-dev.yml},
+    \file{admin-ui/.env.development} (\texttt{VITE\_API\_URL}) and
+    \file{customer-web/.env.development} (\texttt{REACT\_APP\_API\_URL}). You
+    miss the React one. QA files a bug.
+  \end{block}
+
+  \begin{block}{The year-old commit}
+    Security scanning flags
+    \texttt{spring.datasource.password: S3cr3t!} committed in
+    \file{application-staging.yml}.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Scored}
+  \small
+  \begin{tabular}{@{}llp{6.2cm}@{}}
+    \toprule
+    \textbf{Problem} & & \textbf{evnx} \\
+    \midrule
+    IntelliJ / screenshot onboarding & \solved & vault + \cmd{cloud run}. The clean win \\
+    Spring does not read \file{.env}  & \solved & \cmd{cloud run} injects env; relaxed binding does the rest \\
+    One URL, three names             & \partialmark & \flag{-{}-prefix} generates the names from one base \\
+    Secrets in \file{application-*.yml} & \solved & \cmd{scan} reads YAML, not just \file{.env} \\
+    Keystores, PEM, multi-line JSON  & \partialmark & \textbf{revised} --- see slide 14 \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.9em}
+  \saythis{``Four of five have an answer today. Let me show you each one
+  running, and then the one that does not.''}
+\end{frame}
+
+% =========================================================================
+\section{Spring without .env support}
+
+\begin{frame}[fragile]{\cmd{cloud run} --- and relaxed binding does the mapping}
+\begin{lstlisting}[style=evnxcode]
+cd backend && evnx cloud run -- ./mvnw spring-boot:run
+\end{lstlisting}
+
+  \vspace{0.6em}
+  Spring Boot's relaxed binding maps environment variables onto properties
+  automatically:
+
+  \vspace{0.4em}
+  \begin{center}\small
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    \textbf{Vault variable} & \textbf{Spring property} \\
+    \midrule
+    \texttt{SPRING\_DATASOURCE\_URL}   & \texttt{spring.datasource.url} \\
+    \texttt{SPRING\_DATASOURCE\_PASSWORD} & \texttt{spring.datasource.password} \\
+    \texttt{APP\_PAYMENT\_API\_KEY}    & \texttt{app.payment.api-key} \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+
+  \vspace{0.6em}
+  {\footnotesize No \texttt{spring.config.import}, no EnvFile plugin, no code
+  change. If you prefer files, \texttt{spring.config.import=optional:file:.env[.properties]}
+  also works --- but then you are back to a plaintext file on disk.}
+\end{frame}
+
+\begin{frame}[fragile]{The YAML stays clean}
+\begin{lstlisting}[style=evnxcode]
+spring:
+  datasource:
+    url: ${DB_URL}
+    password: ${DB_PASSWORD}
+app:
+  payment:
+    api-key: ${APP_PAYMENT_API_KEY}
+\end{lstlisting}
+
+  \vspace{0.7em}
+  \begin{block}{Same file, three sources}
+    Locally the values come from \cmd{cloud run}. In CI from the runner's
+    environment. In production from Kubernetes. The committed YAML never
+    changes and never holds a secret.
+  \end{block}
+
+  \vspace{0.5em}
+  {\footnotesize Also covers Testcontainers and Kafka integration tests:
+  \cmd{evnx cloud run -{}- ./mvnw verify}.}
+\end{frame}
+
+\begin{frame}[fragile]{\cmd{scan} reads your resources directory}
+  \capturepart{persona/fs-01-scan-resources.txt}{1}{14}
+  \realrun{\texttt{evnx scan backend/src/main/resources/}}
+
+  \vspace{0.4em}
+  \begin{correction}{\cmd{scan} is not a \file{.env}-only tool}
+    It reads \texttt{yml}, \texttt{yaml}, \texttt{java}, \texttt{properties},
+    \texttt{xml}, \texttt{json}, \texttt{ts}, \texttt{js}, \texttt{py},
+    \texttt{rs}, \texttt{go} and more. A widespread assumption says it only
+    looks at \file{.env} --- it does not, and that is what makes it useful on a
+    Spring codebase.
+  \end{correction}
+\end{frame}
+
+% =========================================================================
+\section{One value, three names}
+
+\begin{frame}[fragile]{\flag{-{}-prefix} generates the per-app names}
+  \begin{columns}[T]
+    \begin{column}{0.49\textwidth}
+      \capture{persona/fs-02-prefix-vite.txt}
+    \end{column}
+    \begin{column}{0.49\textwidth}
+      \capture{persona/fs-03-prefix-cra.txt}
+    \end{column}
+  \end{columns}
+  \realrun{one \file{.env}, two prefixed outputs}
+
+  \vspace{0.4em}
+  {\footnotesize Keep \textbf{one} base value. Generate
+  \texttt{VITE\_API\_URL} and \texttt{REACT\_APP\_API\_URL} from it in each
+  app's build step. The QA bug from slide 5 becomes impossible because there is
+  only one place to edit.}
+\end{frame}
+
+\begin{frame}[fragile]{Wiring it into the monorepo}
+\begin{lstlisting}[style=evnxcode]
+# admin-ui/prebuild.sh
+evnx convert --env ../shared.env --to shell --prefix VITE_ > .env.generated
+
+# customer-web/prebuild.sh
+evnx convert --env ../shared.env --to shell --prefix REACT_APP_ > .env.generated
+\end{lstlisting}
+
+  \vspace{0.7em}
+  \begin{trap}{This is a pattern you maintain, not a feature}
+    There is no \texttt{evnx.toml} listing workspace directories, no
+    \cmd{validate -{}-all}, no \cmd{cloud pull -{}-all}, and no
+    \texttt{\$\{\{shared.API\_URL\}\}} reference syntax across vaults. Monorepo
+    workspaces are item 1 on this audience's roadmap.
+  \end{trap}
+
+  \vspace{0.4em}
+  {\footnotesize Until then: three vaults (\texttt{shop-backend},
+  \texttt{shop-admin}, \texttt{shop-web}) and a CI matrix over the three
+  directories.}
+\end{frame}
+
+\begin{frame}[fragile]{Also useful: the CRA → Vite migration}
+\begin{lstlisting}[style=evnxcode]
+# what needs renaming?
+evnx convert --to json --include "REACT_APP_*" | jq -r 'keys[]'
+\end{lstlisting}
+
+  \vspace{0.7em}
+  \begin{block}{No rename command}
+    \cmd{convert} lists and re-prefixes; it does not rewrite your source. Pair
+    the list above with \texttt{sed} over the codebase, then
+    \cmd{evnx diff} to confirm nothing was dropped.
+  \end{block}
+\end{frame}
+
+% =========================================================================
+\section{The frontend halves}
+
+\begin{frame}[fragile]{\texttt{VITE\_} and \texttt{REACT\_APP\_} leak the same way}
+  \capture{persona/fs-04-scan-cra-build.txt}
+  \realrun{\file{customer-web/build/static/js/main.js} contains a live Stripe key}
+
+  \vspace{0.4em}
+  \begin{trap}{\file{build/} and \file{dist/} are on the default exclusion list}
+    The standard advice --- \cmd{evnx scan customer-web/build/} --- reports
+    ``0 files scanned'' and exit \exitzero. \file{src/commands/scan/filters.rs:106}.
+    Tracked \textbf{NEW-1, P0}.
+  \end{trap}
+
+  \vspace{0.4em}
+  {\footnotesize Workaround: \texttt{cp -r build /tmp/scanme \&\& evnx scan
+  /tmp/scanme}. And assert \texttt{.files\_scanned > 0} in CI rather than
+  trusting the exit code.}
+\end{frame}
+
+\begin{frame}{The build-time trap, stated once for both frameworks}
+  \small
+  \begin{itemize}
+    \item \texttt{VITE\_*} and \texttt{REACT\_APP\_*} are \textbf{inlined at
+          build time}. Changing the vault does nothing until you rebuild.
+    \item Frontend Docker images therefore need the values as \textbf{build
+          args} --- \cmd{convert -{}-to shell} feeds them --- or you move to a
+          runtime \file{env.js} rendered by \cmd{evnx template} at container
+          start.
+    \item evnx has \textbf{no prefix awareness}: a secret named
+          \texttt{VITE\_STRIPE\_KEY} passes \cmd{validate} cleanly. Use
+          \cmd{scan}, which works on values, plus a name guard of your own.
+  \end{itemize}
+
+  \vspace{0.7em}
+  \begin{block}{The name guard, one line}
+    \begin{center}\ttfamily\scriptsize
+    evnx convert -{}-to json \textbar{} jq -r 'keys[] \textbar{} select(test("\^{}(VITE\_\textbar{}REACT\_APP\_)")) \textbar{} select(test("SECRET\textbar{}TOKEN\textbar{}KEY"))'
+    \end{center}
+  \end{block}
+\end{frame}
+
+% =========================================================================
+\section{Multi-line and binary}
+
+\begin{frame}{The claim to correct}
+  \begin{center}\Large
+  ``Keystores, PEM certificates, multi-line JSON --- \\
+  \textbf{parser does not support multi-line values}.''
+  \end{center}
+
+  \vspace{1.0em}
+  \begin{center}\large
+  Half wrong. Multi-line values parse. \emph{Binary files} are the real gap.
+  \end{center}
+
+  \vspace{0.8em}
+  \saythis{Splitting the claim is the point --- one half is a solved problem
+  people are working around unnecessarily.}
+\end{frame}
+
+\begin{frame}[fragile]{A PEM certificate, round-tripped}
+  \capture{persona/py-05-multiline-pem.txt}
+  \realrun{double-quoted multi-line value}
+
+  \vspace{0.4em}
+  {\footnotesize \texttt{B=2} on the line after proves the parser resumed
+  correctly. Newlines survive as \texttt{\textbackslash n}. Spring reads it
+  from the environment exactly as written.}
+\end{frame}
+
+\begin{frame}[fragile]{The quoting rule that decides whether it works}
+  \begin{columns}[T]
+    \begin{column}{0.49\textwidth}
+      \centering\footnotesize\textbf{single-quoted JSON --- works}
+      \capturepart{persona/py-07-multiline-json-sq.txt}{1}{8}
+    \end{column}
+    \begin{column}{0.49\textwidth}
+      \centering\footnotesize\textbf{double-quoted with \texttt{\textbackslash "} --- fails}
+      \capturepart{persona/py-06-multiline-json-dq.txt}{1}{5}
+    \end{column}
+  \end{columns}
+
+  \vspace{0.6em}
+  \begin{block}{The rule}
+    A double-quoted value ends at the first inner \texttt{"}, escaped or not.
+    \textbf{Wrap JSON in single quotes.} PEM has no inner quotes so either
+    works. The failure is loud --- exit \exittwo\ with a line number --- which
+    is the right kind of failure.
+  \end{block}
+\end{frame}
+
+\begin{frame}{What genuinely does not fit in a vault}
+  \small
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    \textbf{Artefact} & & \textbf{Today} \\
+    \midrule
+    PEM certificate, inline          & \solved   & a multi-line variable \\
+    Service-account JSON, inline     & \solved   & single-quoted multi-line \\
+    Java keystore \file{.jks}, \file{.p12} & \unsolved & binary. Mount it; vault the password \\
+    Spring Cloud Config / HashiCorp Vault & \unsolved & no sync in either direction \\
+    Actuator \texttt{/env} exposure  & \unsolved & Spring configuration, not a file problem \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.8em}
+  \begin{block}{If your company already runs HashiCorp Vault}
+    Decide the source of truth \textbf{per environment}, not per tool. The
+    workable split is evnx for local and dev, Vault for staging and production,
+    with \cmd{convert} / \cmd{migrate} as the hand-off. Two systems pretending
+    to both own production is the failure mode.
+  \end{block}
+\end{frame}
+
+% =========================================================================
+\section{Deploy and CI}
+
+\begin{frame}[fragile]{Kubernetes, and the matrix build}
+\begin{lstlisting}[style=evnxcode]
+# K8s Secret -- pipe it, never commit it
+evnx convert --to kubernetes | kubectl apply -f -
+
+# CI: one job per app directory
+strategy:
+  matrix:
+    app: [backend, admin-ui, customer-web]
+steps:
+  - run: evnx validate --strict --format github
+    working-directory: ${{ matrix.app }}
+  - run: evnx scan . --format sarif > evnx.sarif || test $? -eq 1
+\end{lstlisting}
+
+  \vspace{0.5em}
+  {\footnotesize Helm values: \cmd{evnx template} renders them. There is no
+  Helm-native output target and no Argo CD integration.}
+\end{frame}
+
+\begin{frame}{The scorecard, revised}
+  \begin{center}
+  \begin{tabular}{@{}clp{6.2cm}@{}}
+    \toprule
+    & \textbf{Count} & \textbf{Items} \\
+    \midrule
+    \solved     & 7 & IntelliJ onboarding, Spring via \cmd{cloud run}, \file{.env.example} drift, clean YAML, secret scanning in resources, CI gates, \textbf{multi-line values} \\
+    \partialmark & 9 & monorepo structure, one URL three names, relaxed-binding naming, frontend prefix leaks, integration tests, CRA migration, Vault overlap, rotation, K8s/Helm \\
+    \unsolved   & 2 & binary keystores, Actuator \texttt{/env} \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+
+  \vspace{0.6em}
+  \begin{correction}{one item moved}
+    Multi-line values were listed \unsolved. They work with one quoting rule,
+    so the unsolved count is 2, not 3 --- and the ``keep PEM elsewhere''
+    workaround is unnecessary.
+  \end{correction}
+\end{frame}
+
+\begin{frame}{What is coming, in priority order}
+  \small
+  \begin{tabular}{@{}clp{5.6cm}@{}}
+    \toprule
+    & \textbf{Feature} & \textbf{Fixes} \\
+    \midrule
+    P0 & Scan an explicitly-named excluded path & \file{build/}, \file{dist/} \\
+    1  & Monorepo workspaces --- \file{evnx.toml} listing app dirs, \cmd{validate -{}-all}, \cmd{cloud pull -{}-all} & three directories, three commands \\
+    2  & Shared values / cross-vault references & one URL, three names \\
+    3  & Escaped quotes in double-quoted multi-line values & the JSON parse failure \\
+    4  & Prefix-aware validation (Vite, CRA) & \texttt{VITE\_STRIPE\_KEY} passing clean \\
+    5  & \cmd{convert -{}-to spring-properties} / \texttt{application-yaml} & relaxed-binding naming \\
+    6  & HashiCorp Vault / Spring Cloud Config targets & the overlap question \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}[plain]
+  \vfill
+  \begin{center}
+    {\LARGE\textbf{Questions}}\\[1.2em]
+    {\small \url{https://www.evnx.dev/guides} · \url{https://github.com/urwithajit9/evnx}}\\[0.8em]
+    {\footnotesize\textcolor{evnxMuted}{evnx 0.5.2 · every terminal block is a real run}}
+  \end{center}
+  \vfill
+\end{frame}
+
+\end{document}

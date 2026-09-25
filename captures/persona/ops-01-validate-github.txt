@@ -1,0 +1,7 @@
+$ evnx validate --format github
+::error file=.env,line=1::Missing required variable: NEW_VAR%0ASuggestion: Add NEW_VAR=<value> to .env
+::error file=.env,line=3::SENTRY_DSN looks like a placeholder
+::warning file=.env,line=5::DEBUG is set to "True" (string, not boolean)%0ASuggestion: Use true or 0 for proper boolean handling
+Validation failed: 2 errors
+  Docs: https://www.evnx.dev/guides/commands/validate
+exit=1

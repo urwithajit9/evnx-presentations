@@ -1,0 +1,484 @@
+% ===========================================================================
+%  evnx for Frontend Developers  —  Vite + React, Next.js, Vercel
+%  Persona RKS.  Build: pdflatex -interaction=nonstopmode frontend.tex  (x2)
+% ===========================================================================
+\documentclass[aspectratio=169,10pt]{beamer}
+
+\newcommand{\capturedir}{../captures}
+\input{persona-preamble}
+
+\title{evnx for frontend developers}
+\subtitle{The \file{.env} problems that are actually \emph{yours}}
+\date{}
+
+\begin{document}
+
+\begin{frame}[plain]
+  \titlepage
+  \audience{Vite + React · Next.js App Router · Vercel · Docker/nginx}
+  \begin{center}\footnotesize
+  \textcolor{evnxMuted}{evnx 0.5.2. Every terminal block is a real run, including
+  the ones where evnx is wrong.}
+  \end{center}
+\end{frame}
+
+% =========================================================================
+\begin{frame}{This deck in one slide}
+  \begin{block}{Three things a frontend developer should take away}
+    \begin{enumerate}
+      \item evnx replaces \textbf{Slack} as the way your team moves
+            \file{.env} files. That part is finished and it works.
+      \item evnx has \textbf{no idea what \texttt{NEXT\_PUBLIC\_} means}.
+            The check that would catch your worst bug does not exist yet.
+      \item The workaround everyone recommends ---
+            \cmd{evnx scan dist/} --- \textbf{silently scans nothing}.
+            We will prove it on slide 12.
+    \end{enumerate}
+  \end{block}
+  \saythis{``I am going to show you the good part first, then I am going to
+  show you the part that would have bitten you in week two.''}
+\end{frame}
+
+\begin{frame}{Contents}\tableofcontents[hideallsubsections]\end{frame}
+
+% =========================================================================
+\section{Your Monday}
+
+\begin{frame}{A week you have had}
+  \small
+  \begin{description}
+    \item[Monday] A new teammate asks for the \file{.env}. You dig through
+      Slack, find a version from March, send it. Two hours later their map
+      widget is blank --- \texttt{VITE\_MAPS\_KEY} was added in June and never
+      reached \file{.env.example}.
+    \item[Tuesday] You add Stripe. You name the key
+      \texttt{NEXT\_PUBLIC\_STRIPE\_KEY} so the checkout page can read it.
+      It is the \textbf{secret} key. Review does not catch it.
+    \item[Wednesday] Staging API URL changes. You update Vercel. The preview
+      still calls the old URL --- \texttt{NEXT\_PUBLIC\_*} froze at build time.
+    \item[Thursday] Ops wants to promote the staging Docker image to
+      production. They cannot. The URL is baked into \file{dist/}.
+  \end{description}
+  \vspace{0.5em}
+  \saythis{Ask the room which of the four they had this month. Usually three hands go up on Tuesday.}
+\end{frame}
+
+\begin{frame}{Where the four problems actually live}
+  \small
+  \begin{tabular}{@{}llp{5.6cm}@{}}
+    \toprule
+    \textbf{Day} & \textbf{Root cause} & \textbf{Can a file tool fix it?} \\
+    \midrule
+    Monday   & \file{.env.example} drift     & \solved\ Yes --- this is exactly a file problem \\
+    Tuesday  & secret behind a public prefix & \unsolved\ Not today. evnx sees files, not bundler semantics \\
+    Wednesday& build-time inlining           & \unsolved\ No. Framework behaviour \\
+    Thursday & build-time inlining           & \partialmark\ Only by changing the pattern (runtime \file{env.js}) \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.9em}
+  \begin{block}{The honest shape of the pitch}
+    evnx is very good at \textbf{one} of your four days, and that one day is
+    the one you repeat every week. The other three need you to change how the
+    app reads configuration --- no tool does that for you.
+  \end{block}
+\end{frame}
+
+% =========================================================================
+\section{What works today}
+
+\begin{frame}{Stage A --- onboarding and drift}
+  \small
+  \begin{tabular}{@{}clp{6.2cm}@{}}
+    \toprule
+    & \textbf{Pain} & \textbf{Command} \\
+    \midrule
+    \solved & Getting the \file{.env} from a teammate & \cmd{evnx cloud link app/dev} then \cmd{evnx cloud pull} \\
+    \solved & \file{.env.example} always stale        & \cmd{evnx diff}, \cmd{evnx sync -{}-check} in CI \\
+    \solved & Starting a new project                  & \cmd{evnx init} (Next.js blueprint) \\
+    \partialmark & Which of six env files is which    & \flag{-{}-env-name} targets one file; load order is yours \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.8em}
+  \begin{block}{The \texttt{-{}-env-name} rule, precisely}
+    \flag{-{}-env-name local} resolves to \file{.env.local}. A name whose file
+    does not exist is an \textbf{error} listing the ones that do --- it never
+    quietly falls back to \file{.env}. That is the behaviour you want in CI.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{\cmd{diff}: the Monday problem, solved}
+  \capturepart{persona/py-02-diff.txt}{1}{20}
+  \realrun{\texttt{evnx diff}}
+
+  \vspace{0.3em}
+  {\footnotesize Values are masked (\texttt{yo***}, \texttt{ch***}) --- the
+  output is safe to paste into a ticket. Exit \exitone\ means ``there is a
+  finding'', not ``the tool broke''.}
+\end{frame}
+
+\begin{frame}{The exit contract --- why CI people care}
+  \begin{center}
+  \begin{tabular}{@{}cll@{}}
+    \toprule
+    \textbf{Code} & \textbf{Means} & \textbf{Your pipeline should} \\
+    \midrule
+    \exitzero & clean                & continue \\
+    \exitone  & a finding            & fail the check, show the finding \\
+    \exittwo  & \textbf{could not run} & fail loudly --- this is not a pass \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+
+  \vspace{0.9em}
+  \begin{block}{Why \exittwo\ exists}
+    Before it, ``no \file{.env.example}'' and ``no problems found'' were both
+    exit \exitzero. A misconfigured gate looked identical to a green one.
+    evnx now prints \emph{``No verdict: evnx did not finish. This is not a
+    clean result.''}
+  \end{block}
+  \saythis{This is the slide that wins over whoever owns the pipeline.}
+\end{frame}
+
+% =========================================================================
+\section{The prefix problem}
+
+\begin{frame}[fragile]{Here is the file that ends your week}
+\begin{lstlisting}[style=evnxcode]
+# .env.local
+NEXT_PUBLIC_API_URL=https://api.acme.io
+NEXT_PUBLIC_STRIPE_KEY=sk_live_51H8xQ2KZvNbGtRsPmWcYdLfE9AjXoTuV
+NEXT_PUBLIC_FEATURE_BETA=false
+DATABASE_URL=postgresql://u:p@db:5432/app
+\end{lstlisting}
+
+  \vspace{0.4em}
+  Line 2 is a \textbf{live Stripe secret key} with a prefix that ships it to
+  every browser that loads the checkout page.
+
+  \vspace{0.6em}
+  \saythis{``Before I run anything --- what do you expect \texttt{evnx validate} to say?''
+  Let them answer. They will say it catches it.}
+\end{frame}
+
+\begin{frame}[fragile]{\cmd{validate} is perfectly happy}
+  \capture{persona/fe-04-validate-local.txt}
+  \realrun{a live secret key behind \texttt{NEXT\_PUBLIC\_}}
+
+  \vspace{0.4em}
+  \begin{correction}{this is the gap, not a bug}
+    \cmd{validate} checks \emph{file hygiene}: missing variables, placeholders,
+    weak secrets, boolean traps, duplicate keys, URL shape. ``This name has a
+    public prefix and this value looks secret'' is a \textbf{different class of
+    rule} and evnx does not have it. Exit \exitzero.
+  \end{correction}
+\end{frame}
+
+\begin{frame}[fragile]{\cmd{scan} does catch it --- by value, not by name}
+  \capturepart{persona/fe-05-scan-envlocal.txt}{1}{14}
+  \realrun{\texttt{evnx scan .env.local}}
+
+  \vspace{0.3em}
+  {\footnotesize \textbf{Use \cmd{scan}, not \cmd{validate}, as your prefix
+  guard.} It matched the Stripe \emph{value format}. It would \emph{not} have
+  matched a bespoke internal token with no recognisable shape.}
+\end{frame}
+
+\begin{frame}[fragile]{The gap-filler you can ship today}
+  \capture{persona/fe-06-prefix-guard.txt}
+  \realrun{one line of \texttt{jq} over \texttt{convert -{}-to json}}
+
+  \vspace{0.5em}
+  \begin{block}{Put it in \file{.pre-commit-config.yaml} or a CI step}
+    Any output at all means a secret-\emph{looking} name carries a public
+    prefix. It is a name heuristic, so it catches the Tuesday mistake ---
+    which is a naming mistake, not a value mistake.
+  \end{block}
+\end{frame}
+
+% =========================================================================
+\section{The trap: scanning your build output}
+
+\begin{frame}{The advice everyone gives}
+  Every write-up of ``how do I check my bundle for leaked keys'' ends with the
+  same two commands:
+
+  \vspace{0.8em}
+  \begin{center}\large
+  \cmd{npm run build \&\& evnx scan dist/} \\[0.4em]
+  \cmd{next build \&\& evnx scan .next/static/}
+  \end{center}
+
+  \vspace{0.9em}
+  One of those two works.
+
+  \vspace{0.6em}
+  \saythis{Pause here. This is the moment the deck earns its keep.}
+\end{frame}
+
+\begin{frame}[fragile]{A real Stripe key, inlined into \file{dist/bundle.js}}
+  \capture{persona/fe-01-scan-dist.txt}
+  \realrun{\texttt{dist/} contains a live \texttt{sk\_live\_} key}
+
+  \vspace{0.4em}
+  \begin{trap}{``0 files scanned'' --- and exit \exitzero}
+    \file{dist/} is on evnx's \textbf{default exclusion list}, alongside
+    \file{node\_modules/}, \file{target/} and \file{build/}. Excluding build
+    output is right when you scan a whole repo. It is wrong when \file{dist/}
+    is the thing you \emph{asked} for --- and evnx does not tell you the
+    difference.
+  \end{trap}
+\end{frame}
+
+\begin{frame}[fragile]{Naming the file directly does not help}
+  \capture{persona/fe-02-scan-dist-file.txt}
+  \realrun{the exact file, named on the command line}
+
+  \vspace{0.4em}
+  {\footnotesize You pointed at one file. It is excluded. evnx reports
+  \textbf{success} over ground it never looked at. A CI gate built on this
+  passes green forever.}
+
+  \vspace{0.5em}
+  \begin{block}{\small Where it lives}
+    \file{src/commands/scan/filters.rs:106} --- the file branch has no
+    \texttt{else}, so an explicitly-named excluded path is dropped in silence.
+    Tracked as \textbf{NEW-1, P0}.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Next.js works --- for an accidental reason}
+  \capturepart{persona/fe-03-scan-next-static.txt}{1}{14}
+  \realrun{\texttt{evnx scan .next/static/}}
+
+  \vspace{0.4em}
+  \begin{block}{Why this one passes}
+    \file{.next/} is not on the exclusion list. \file{dist/} and \file{build/}
+    are. Whether your bundle gets scanned depends on \textbf{what your
+    framework names its output directory} --- which is not a security model.
+  \end{block}
+\end{frame}
+
+\begin{frame}{What to do about it until it is fixed}
+  \small
+  \begin{enumerate}
+    \item \textbf{Next.js:} \cmd{evnx scan .next/static/} works. Use it.
+    \item \textbf{Vite / CRA:} copy the bundle out of the excluded name first:
+      \vspace{0.3em}
+      \begin{center}\ttfamily\small
+      cp -r dist /tmp/scanme \&\& evnx scan /tmp/scanme
+      \end{center}
+      \vspace{0.3em}
+    \item \textbf{Never} trust a \cmd{scan} that reports
+      \texttt{0 files scanned}. Assert the file count in CI, not just the
+      exit code.
+  \end{enumerate}
+
+  \vspace{0.8em}
+  \begin{block}{The general lesson, worth saying out loud}
+    A scanner's \emph{worst} failure is a confident pass. Whatever tool you
+    use, make your pipeline check that it looked at something.
+  \end{block}
+\end{frame}
+
+% =========================================================================
+\section{Cloud sync}
+
+\begin{frame}{The part that replaces Slack}
+  \small
+  \begin{tabular}{@{}lp{7.4cm}@{}}
+    \toprule
+    \cmd{evnx vault create portal -{}-env development} & one vault per environment \\
+    \cmd{evnx cloud link portal/development}           & bind this directory to it \\
+    \cmd{evnx cloud push}                              & encrypt locally, upload ciphertext \\
+    \cmd{evnx cloud pull}                              & download, decrypt locally \\
+    \cmd{evnx vault share portal/development -{}-with ana@acme.io} & add a teammate \\
+    \cmd{evnx vault revoke portal/development -{}-user ana@acme.io} & remove one \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.9em}
+  \begin{block}{Two details that matter to a sceptical room}
+    \begin{itemize}
+      \item The flag is \flag{-{}-with} on \cmd{share} and \flag{-{}-user} on
+            \cmd{revoke}. Yes, that is inconsistent. It is on the backlog.
+      \item \textbf{Revocation re-keys the vault.} A removed member holding an
+            old copy of the key cannot read versions pushed after removal.
+            Revocation that does not revoke is worse than none.
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\begin{frame}{``The server can read my keys, right?''}
+  \small
+  \begin{block}{No --- and here is the chain, so you can check it}
+    \begin{center}\ttfamily\scriptsize
+    password → Argon2id → MasterKey (never leaves the device) \\
+    → XChaCha20 wraps VaultKey \\
+    → AES-256-GCM(VaultKey) encrypts your \texttt{.env} → ciphertext → storage
+    \end{center}
+  \end{block}
+
+  \vspace{0.5em}
+  \begin{itemize}\small
+    \item Sharing uses a \textbf{hybrid X25519 + ML-KEM-768} wrap. There is no
+          classical-only path, so a share is not harvest-now-decrypt-later bait.
+    \item The version number is authenticated into the ciphertext, so the
+          server cannot replay an old version as current.
+    \item \textbf{The honest caveat:} recipient public keys come from the
+          server. A malicious server could substitute its own. There is no
+          out-of-band fingerprint check yet, so ``the server cannot read your
+          secrets'' becomes ``cannot read them \emph{passively}'' once you share.
+  \end{itemize}
+  \saythis{Volunteering the caveat is what makes the rest of the claim credible.}
+\end{frame}
+
+\begin{frame}[fragile]{\cmd{cloud run}: no plaintext file at all}
+  \begin{center}\large\cmd{evnx cloud run -{}- npm run dev}\end{center}
+
+  \vspace{0.8em}
+  Secrets go into the dev server's environment. No \file{.env.local} on disk ---
+  so nothing for a backup, a screen share, or an AI coding assistant to read
+  out of your working tree.
+
+  \vspace{0.8em}
+  \begin{trap}{What it does \emph{not} remove}
+    It removes the \textbf{file}, not the \textbf{master password}. And your
+    public variables still end up in the built JavaScript --- that is the
+    design of the framework, not a gap in evnx.
+  \end{trap}
+\end{frame}
+
+% =========================================================================
+\section{Vercel}
+
+\begin{frame}[fragile]{\cmd{convert -{}-to vercel} --- read the output before you paste}
+  \capturepart{persona/fe-07-convert-vercel.txt}{1}{22}
+  \realrun{\texttt{evnx convert -{}-env .env.local -{}-to vercel}}
+
+  \vspace{0.3em}
+  {\footnotesize Note what happened: every variable was emitted with
+  \texttt{target: [production, preview, development]} --- including
+  \texttt{DATABASE\_URL}. \cmd{convert} transforms, it does not judge. Pair it
+  with \flag{-{}-include} / \flag{-{}-exclude} and review the result.}
+\end{frame}
+
+\begin{frame}{What is still manual with Vercel}
+  \small
+  \begin{itemize}
+    \item \textbf{No vault → Vercel sync.} A zero-knowledge server cannot push
+          your plaintext anywhere; only your machine can. Script it in CI:
+          \cmd{cloud pull} then \texttt{vercel env add}.
+    \item \textbf{No ``rebuild required'' notice} when a public variable changes
+          between vault versions.
+    \item \textbf{No per-branch preview environments.} Out of scope.
+  \end{itemize}
+
+  \vspace{0.8em}
+  \begin{block}{Reframe for the room}
+    ``No automatic push'' is a consequence of the property they just agreed
+    they wanted. A server that could sync to Vercel for you is a server that
+    can read your secrets.
+  \end{block}
+\end{frame}
+
+% =========================================================================
+\section{Adoption}
+
+\begin{frame}[fragile]{Copy-paste: the whole setup}
+\begin{lstlisting}[style=evnxcode]
+# once per repo
+evnx init                        # Blueprint -> Next.js / React
+evnx doctor --fix                # .gitignore + file permissions
+evnx vault create portal --env development
+evnx cloud link portal/development
+evnx cloud push
+
+# daily
+evnx cloud run -- npm run dev    # no .env.local on disk
+evnx validate --strict
+
+# before deploy  (note the copy -- see the dist/ slide)
+npm run build && cp -r dist /tmp/scanme && evnx scan /tmp/scanme
+next build     && evnx scan .next/static/
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{Pre-commit, and the one check evnx does not have}
+\begin{lstlisting}[style=evnxcode]
+repos:
+  - repo: https://github.com/urwithajit9/evnx
+    rev: v0.5.0
+    hooks:
+      - id: evnx-scan
+      - id: evnx-validate
+      - id: evnx-diff
+
+  - repo: local
+    hooks:
+      - id: public-prefix-guard
+        name: secret-looking name with a public prefix
+        entry: bash -c 'evnx convert --to json | jq -er
+          "keys[] | select(test(\"^(VITE_|NEXT_PUBLIC_)\"))
+                  | select(test(\"SECRET|PASSWORD|PRIVATE|TOKEN|SK_|KEY\"))"
+          && exit 1 || exit 0'
+        language: system
+\end{lstlisting}
+  {\footnotesize The second hook is the Tuesday guard. Delete it the day evnx
+  ships prefix awareness.}
+\end{frame}
+
+\begin{frame}{The scorecard, honestly}
+  \begin{center}
+  \begin{tabular}{@{}clp{6.4cm}@{}}
+    \toprule
+    & \textbf{Count} & \textbf{Items} \\
+    \midrule
+    \solved     & 10 & onboarding, drift, init, placeholders, duplicate keys, multi-machine sync, URL shape, gitignore, no-plaintext-file, CI signals \\
+    \partialmark & 9 & file-per-framework, boolean trap, env types, prefix leak (workaround), rotation, offboarding, Vercel, build-once, cross-app names \\
+    \unsolved   & 3 & \texttt{undefined} at runtime, rebuild-on-change, preview environments \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+
+  \vspace{0.8em}
+  \begin{block}{One sentence}
+    evnx takes over everything you used to do in Slack, and is weakest exactly
+    where frontend is different from everything else --- public prefixes and
+    build-time inlining.
+  \end{block}
+\end{frame}
+
+\begin{frame}{What is coming, in priority order}
+  \small
+  \begin{tabular}{@{}clp{5.4cm}@{}}
+    \toprule
+    & \textbf{Feature} & \textbf{Fixes the slide on} \\
+    \midrule
+    P0 & Scan an explicitly-named excluded path & \file{dist/} reporting 0 files \\
+    1  & Prefix-aware validation (Vite, Next, Astro, SvelteKit, CRA) & Tuesday \\
+    2  & \flag{-{}-built vite\textbar next} scan preset & the \texttt{cp -r} workaround \\
+    3  & Framework-aware \cmd{cloud pull -{}-profile next} & six files, one right answer \\
+    4  & \cmd{evnx types -{}-target vite\textbar zod} & \file{vite-env.d.ts} drift \\
+    5  & ``Rebuild required'' notice on public-var change & Wednesday \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.8em}
+  \saythis{Ending on the roadmap invites them to argue about the order --- which
+  is the conversation you want to be having.}
+\end{frame}
+
+\begin{frame}[plain]
+  \vfill
+  \begin{center}
+    {\LARGE\textbf{Questions}}\\[1.2em]
+    {\small \url{https://www.evnx.dev/guides} · \url{https://github.com/urwithajit9/evnx}}\\[0.8em]
+    {\footnotesize\textcolor{evnxMuted}{evnx 0.5.2 · every terminal block in this
+    deck is a real run, re-recorded for this audience}}
+  \end{center}
+  \vfill
+\end{frame}
+
+\end{document}

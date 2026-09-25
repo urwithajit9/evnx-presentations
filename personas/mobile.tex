@@ -1,0 +1,351 @@
+% ===========================================================================
+%  evnx for Mobile Developers  —  Expo / React Native, Flutter
+%  Persona MK.  Build: pdflatex -interaction=nonstopmode mobile.tex
+% ===========================================================================
+\documentclass[aspectratio=169,10pt]{beamer}
+
+\newcommand{\capturedir}{../captures}
+\input{persona-preamble}
+
+\title{evnx for mobile developers}
+\subtitle{Expo and Flutter --- where ``the binary is public'' changes everything}
+\date{}
+
+\begin{document}
+
+\begin{frame}[plain]
+  \titlepage
+  \audience{Expo / React Native · Flutter flavours · EAS · Fastlane}
+  \begin{center}\footnotesize
+  \textcolor{evnxMuted}{evnx 0.5.2. Every terminal block is a real run.}
+  \end{center}
+\end{frame}
+
+% =========================================================================
+\begin{frame}{This deck in one slide}
+  \begin{block}{The rule your team should adopt, whatever tool you pick}
+    \textbf{The vault for an app build should contain only values that are
+    safe to be public.} Real secrets stay on the backend.
+  \end{block}
+
+  \vspace{0.7em}
+  \begin{block}{Because everything else follows from it}
+    An APK is a zip file. An IPA is a zip file. Anything your build reads at
+    compile time is extractable by anyone who downloads your app. No secret
+    manager changes that --- it only changes who can get a secret
+    \emph{before} the build.
+  \end{block}
+
+  \saythis{If the room accepts this slide, the rest is logistics. If they do
+  not, nothing later will help.}
+\end{frame}
+
+\begin{frame}{Contents}\tableofcontents[hideallsubsections]\end{frame}
+
+% =========================================================================
+\section{Three releases that went wrong}
+
+\begin{frame}{You have shipped these}
+  \small
+  \begin{block}{The asset}
+    \texttt{flutter\_dotenv} loads \file{.env} as an \textbf{app asset}. A
+    security review unpacks the APK and finds it --- including a third-party
+    API secret meant only for the backend.
+  \end{block}
+
+  \begin{block}{The wrong profile}
+    A staging build points at the production API.
+    \texttt{EXPO\_PUBLIC\_API\_URL} was set in EAS for ``production'' and the
+    build used the ``preview'' profile.
+  \end{block}
+
+  \begin{block}{The keystore}
+    The Android keystore password lives in a teammate's
+    \file{\textasciitilde/.gradle/gradle.properties}. They are on vacation.
+    The release is blocked.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Which of the three evnx actually fixes}
+  \small
+  \begin{tabular}{@{}llp{5.8cm}@{}}
+    \toprule
+    \textbf{Incident} & \textbf{Verdict} & \textbf{Why} \\
+    \midrule
+    Bundled \file{.env} asset & \partialmark & \cmd{scan assets/} finds it ---
+      \emph{after} you have already built it. No prefix awareness, no APK unpacking \\
+    Wrong profile              & \partialmark & \cmd{validate -{}-env-name} per
+      file; cross-file consistency is a check you write \\
+    Keystore password          & \solved      & vault the \textbf{password};
+      the \file{.jks} file itself is not storable \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.9em}
+  \begin{block}{Honest framing}
+    The keystore one is a clean win and it unblocks releases. The other two
+    evnx helps with but does not close --- and it is worth saying which is
+    which before someone finds out on their own.
+  \end{block}
+\end{frame}
+
+% =========================================================================
+\section{The good part: one vault per flavour}
+
+\begin{frame}[fragile]{Flavours map onto vaults directly}
+\begin{lstlisting}[style=evnxcode]
+evnx vault create field-app --env dev
+evnx vault create field-app --env staging
+evnx vault create field-app --env prod
+
+# Flutter
+evnx cloud run -- flutter run --flavor dev
+
+# Expo
+evnx cloud run -- npx expo start
+evnx cloud run -- eas build --local
+
+# Fastlane -- and this is where the keystore password comes from
+evnx cloud run -- bundle exec fastlane android release
+\end{lstlisting}
+
+  \vspace{0.5em}
+  {\footnotesize \cmd{cloud run} means no \file{.env} on the build machine and
+  no \texttt{gradle.properties} on a colleague's laptop as the single point of
+  failure.}
+\end{frame}
+
+\begin{frame}[fragile]{Flutter's \flag{-{}-dart-define-from-file} fits perfectly}
+  \capture{persona/mob-02-dartdefine.txt}
+  \realrun{\texttt{evnx convert -{}-to json -{}-exclude "*\_SECRET*"}}
+
+  \vspace{0.4em}
+\begin{lstlisting}[style=evnxcode]
+evnx convert --to json --exclude "*_SECRET*" > config/dev.json
+flutter run --flavor dev --dart-define-from-file=config/dev.json
+\end{lstlisting}
+
+  \vspace{0.3em}
+  \saythis{``Look carefully at that output before the next slide.''}
+\end{frame}
+
+\begin{frame}[fragile]{Now look at what came through}
+\begin{lstlisting}[style=evnxcode]
+{
+  "EXPO_PUBLIC_API_URL":       "https://api.acme.io",
+  "EXPO_PUBLIC_MAPS_KEY":      "AIzaSyD-...",
+  "ANDROID_KEYSTORE_PASSWORD": "hunter2correcthorse"   <-- into the build
+}
+\end{lstlisting}
+
+  \vspace{0.6em}
+  \begin{trap}{\flag{-{}-exclude} is a denylist, and denylists leak}
+    \texttt{ANDROID\_KEYSTORE\_PASSWORD} does not match \texttt{*\_SECRET*}, so
+    it went straight into the JSON that gets compiled into the app. The
+    recommended command is the one that leaked it.
+  \end{trap}
+
+  \vspace{0.5em}
+  \begin{block}{Use an allowlist instead}
+    \begin{center}\ttfamily\small
+    evnx convert -{}-to json -{}-include "EXPO\_PUBLIC\_*" > config/dev.json
+    \end{center}
+    Name what may be public. Never enumerate what may not.
+  \end{block}
+\end{frame}
+
+% =========================================================================
+\section{The public-surface problem}
+
+\begin{frame}[fragile]{\cmd{validate} has no idea what \texttt{EXPO\_PUBLIC\_} means}
+  \capture{persona/mob-03-validate.txt}
+  \realrun{a \file{.env} holding a live Stripe key and a keystore password}
+
+  \vspace{0.4em}
+  {\footnotesize Exit \exitzero. \cmd{validate} checks file hygiene --- missing
+  variables, placeholders, weak secrets, boolean traps. ``This name has a
+  public prefix and this value looks secret'' is a rule that does not exist
+  yet.}
+\end{frame}
+
+\begin{frame}[fragile]{\cmd{scan} is the one that helps}
+  \capturepart{persona/mob-01-scan-assets.txt}{1}{20}
+  \realrun{\texttt{evnx scan assets/} --- the Flutter bundled \file{.env}}
+
+  \vspace{0.3em}
+  {\footnotesize Three findings by three different mechanisms: a \textbf{value}
+  pattern (Stripe, high), a \textbf{variable name} (keystore password, high),
+  and \textbf{entropy} (the Maps key, low). Note the annotation on the middle
+  one --- \emph{``flagged by variable name --- the value was not checked''}.}
+\end{frame}
+
+\begin{frame}{The Firebase caveat, before someone raises it}
+  \begin{block}{\file{google-services.json} and \file{GoogleService-Info.plist}}
+    evnx may flag keys in these by pattern. Firebase API keys are
+    \textbf{meant} to be embedded in clients --- you restrict them in the
+    console, you do not hide them. evnx cannot know that, so expect noise and
+    suppress it deliberately rather than by turning the check off.
+  \end{block}
+
+  \vspace{0.9em}
+  \begin{block}{What this tells you about the tool}
+    Name-based and entropy-based detection cannot distinguish ``public by
+    design'' from ``leaked''. That judgement stays with you. A tool that
+    claimed otherwise would be lying.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{And one place \cmd{scan} will not look}
+  \capture{persona/fe-01-scan-dist.txt}
+  \realrun{\file{dist/bundle.js} contains a live key --- \texttt{expo export} writes here}
+
+  \vspace{0.4em}
+  \begin{trap}{\file{dist/} is on the default exclusion list}
+    \cmd{npx expo export \&\& evnx scan dist/} reports success over ground it
+    never looked at. Copy the output somewhere else first:
+    \vspace{0.3em}
+    \begin{center}\ttfamily\small
+    npx expo export \&\& cp -r dist /tmp/scanme \&\& evnx scan /tmp/scanme
+    \end{center}
+    \vspace{0.2em}
+    Tracked \textbf{NEW-1, P0}. \file{assets/} is not excluded, which is why
+    the Flutter case on the previous slide worked.
+  \end{trap}
+\end{frame}
+
+% =========================================================================
+\section{File secrets and platforms}
+
+\begin{frame}{What a vault cannot hold}
+  \small
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    \textbf{Artefact} & \textbf{In a vault?} & \textbf{Today} \\
+    \midrule
+    Keystore \emph{password}       & \solved   & a normal variable \\
+    \file{.jks} / \file{.p12} file & \unsolved & keep in CI secure files \\
+    App Store Connect \file{.p8}   & \unsolved & same \\
+    \file{google-services.json}    & \partialmark & inline as a single-quoted multi-line value, or keep as a file \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.9em}
+  \begin{block}{The multi-line detail, since it is commonly misreported}
+    evnx \textbf{does} parse multi-line values. A \textbf{single}-quoted block
+    holding JSON round-trips correctly. A \textbf{double}-quoted block
+    containing escaped \texttt{\textbackslash "} fails to parse --- so wrap
+    JSON in single quotes.
+  \end{block}
+\end{frame}
+
+\begin{frame}{EAS, Codemagic, Bitrise}
+  \begin{center}\large No targets. This is a real gap.\end{center}
+
+  \vspace{1em}
+  \begin{block}{The bridge that works today}
+\begin{center}\ttfamily\small
+evnx convert -{}-to shell -{}-include "EXPO\_PUBLIC\_*" \textbar{} \textbackslash \\
+\ \ while read -r line; do eas env:create ...; done
+\end{center}
+  \end{block}
+
+  \vspace{0.8em}
+  \begin{block}{And the reason it cannot be automatic}
+    A zero-knowledge server holds only ciphertext, so \emph{it} can never push
+    your values to EAS. Only a machine holding your key can. Any sync is a
+    script you run, not a service that runs for you --- which is the price of
+    the property, not an oversight.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{The cross-profile check nobody ships}
+\begin{lstlisting}[style=evnxcode]
+# "the prod profile must not point at a staging host"
+for e in dev staging prod; do
+  url=$(evnx convert --env-name "$e" --to json | jq -r .EXPO_PUBLIC_API_URL)
+  echo "$e -> $url"
+done
+# then assert prod matches ^https://api\.acme\.io
+\end{lstlisting}
+
+  \vspace{0.6em}
+  \begin{block}{Why this is worth ten minutes}
+    ``Staging build hit production'' is the incident from slide 5. evnx has no
+    cross-file consistency rules --- it validates one file at a time --- so
+    this loop is the entire guard. Put it in the release pipeline.
+  \end{block}
+\end{frame}
+
+% =========================================================================
+\section{Adoption}
+
+\begin{frame}[fragile]{Copy-paste}
+\begin{lstlisting}[style=evnxcode]
+# one vault per flavour
+evnx vault create field-app --env dev
+
+# Flutter -- allowlist, not denylist
+evnx convert --to json --include "EXPO_PUBLIC_*" > config/dev.json
+flutter run --flavor dev --dart-define-from-file=config/dev.json
+
+# Expo
+evnx cloud run -- npx expo start
+npx expo export && cp -r dist /tmp/scanme && evnx scan /tmp/scanme
+
+# release
+evnx cloud run -- bundle exec fastlane android release
+
+# every build, both platforms
+evnx scan assets/ .        # assets/ is not excluded; dist/ and build/ are
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}{The scorecard, honestly}
+  \begin{center}
+  \begin{tabular}{@{}clp{6.2cm}@{}}
+    \toprule
+    & \textbf{Count} & \textbf{Items} \\
+    \midrule
+    \solved     & 5 & vault per flavour, dart-define JSON, Expo build-time env, \file{.env.example} drift, Fastlane credentials \\
+    \partialmark & 6 & bundled-asset leaks, Firebase config noise, rotation after leak, CI credentials, cross-profile consistency, keystore \emph{passwords} only \\
+    \unsolved   & 2 & EAS targets, Codemagic / Bitrise targets \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+
+  \vspace{0.7em}
+  \begin{block}{One sentence}
+    evnx is a good source of truth per flavour, and its JSON output fits
+    Flutter natively. Mobile's core truth --- anything in the app is public ---
+    needs prefix awareness, file secrets and platform targets it does not
+    have.
+  \end{block}
+\end{frame}
+
+\begin{frame}{What is coming, in priority order}
+  \small
+  \begin{tabular}{@{}clp{5.6cm}@{}}
+    \toprule
+    & \textbf{Feature} & \textbf{Fixes the slide on} \\
+    \midrule
+    P0 & Scan an explicitly-named excluded path & \texttt{expo export} → \file{dist/} \\
+    1  & Public-surface profiles (\texttt{EXPO\_PUBLIC\_}, Flutter asset \file{.env}, dart-define) & the bundled asset \\
+    2  & File secrets (keystore, \file{.p8}, \file{.p12}, service JSON) materialised by \cmd{cloud run} & the keystore file \\
+    3  & Artefact scanning --- unpack APK / AAB / IPA & the security review \\
+    4  & EAS / Codemagic / Bitrise targets & the manual bridge \\
+    5  & Cross-file consistency rules & the wrong profile \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}[plain]
+  \vfill
+  \begin{center}
+    {\LARGE\textbf{Questions}}\\[1.2em]
+    {\small \url{https://www.evnx.dev/guides} · \url{https://github.com/urwithajit9/evnx}}\\[0.8em]
+    {\footnotesize\textcolor{evnxMuted}{evnx 0.5.2 · every terminal block is a real run}}
+  \end{center}
+  \vfill
+\end{frame}
+
+\end{document}

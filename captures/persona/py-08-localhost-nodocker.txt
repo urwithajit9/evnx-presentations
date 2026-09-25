@@ -1,0 +1,8 @@
+$ evnx validate        # no Dockerfile present
+
+  evnx validate  Check environment configuration
+
+✓ All required variables present
+✓ All checks passed
+  Docs: https://www.evnx.dev/guides/commands/validate
+exit=0

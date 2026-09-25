@@ -1,0 +1,30 @@
+$ evnx migrate --to aws-secrets-manager --secret-name prod/billing/config --dry-run
+
+  evnx migrate  Generate destination commands from your .env
+
+
+✓ Loaded 5 secrets from env-file
+
+· AWS Secrets Manager migration
+
+Dry-run — would upload to AWS Secrets Manager:
+  Secret name : prod/billing/config
+  Secrets     : 5
+
+  JSON preview (first 300 chars):
+  {
+  "DATABASE_URL": "postgresql://u:p@db.internal:5432/app",
+  "STRIPE_SECRET_KEY": "sk_live_51H8xQ2KZvNbGtRsPmWcYdLfE9AjXoTuV",
+  "SENTRY_DSN": "your_sentry_dsn_here",
+  "FEATURE_X_URL": "https://x.acme.io",
+  "DEBUG": "True"
+}
+
+Summary:
+  ·  5 secret(s) previewed
+     dry run — nothing was uploaded and nothing was written
+
+Next step:
+  Re-run without --dry-run to apply this.
+  Docs: https://www.evnx.dev/guides/commands/migrate
+exit=0

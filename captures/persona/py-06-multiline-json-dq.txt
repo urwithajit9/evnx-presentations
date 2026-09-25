@@ -1,0 +1,5 @@
+$ evnx convert --env t2.env --to json
+Error: Convert command failed: Failed to parse environment file: 't2.env': Invalid format at line 4: missing '=' separator
+
+No verdict: evnx did not finish. This is not a clean result.
+exit=2

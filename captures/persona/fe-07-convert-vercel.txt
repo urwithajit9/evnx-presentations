@@ -1,0 +1,41 @@
+$ evnx convert --env .env.local --to vercel
+{
+  "NEXT_PUBLIC_API_URL": {
+    "target": [
+      "production",
+      "preview",
+      "development"
+    ],
+    "type": "plain",
+    "value": "https://api.acme.io"
+  },
+  "NEXT_PUBLIC_STRIPE_KEY": {
+    "target": [
+      "production",
+      "preview",
+      "development"
+    ],
+    "type": "plain",
+    "value": "sk_live_51H8xQ2KZvNbGtRsPmWcYdLfE9AjXoTuV"
+  },
+  "NEXT_PUBLIC_FEATURE_BETA": {
+    "target": [
+      "production",
+      "preview",
+      "development"
+    ],
+    "type": "plain",
+    "value": "false"
+  },
+  "DATABASE_URL": {
+    "target": [
+      "production",
+      "preview",
+      "development"
+    ],
+    "type": "plain",
+    "value": "postgresql://u:p@db:5432/app"
+  }
+}
+  Docs: https://www.evnx.dev/guides/commands/convert
+exit=0

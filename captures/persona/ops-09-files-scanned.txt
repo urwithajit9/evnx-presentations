@@ -1,0 +1,10 @@
+$ evnx scan dist/ --format json | jq "{files_scanned, secrets_found}"
+{
+  "files_scanned": 0,
+  "secrets_found": 0
+}
+$ evnx scan .next/static/ --format json | jq "{files_scanned, secrets_found}"
+{
+  "files_scanned": 1,
+  "secrets_found": 1
+}

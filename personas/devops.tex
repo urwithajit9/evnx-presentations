@@ -1,0 +1,408 @@
+% ===========================================================================
+%  evnx for DevOps / Platform Engineers  —  K8s, Terraform, GitHub Actions
+%  Persona NK.  Build: pdflatex -interaction=nonstopmode devops.tex
+% ===========================================================================
+\documentclass[aspectratio=169,10pt]{beamer}
+
+\newcommand{\capturedir}{../captures}
+\input{persona-preamble}
+
+\title{evnx for platform engineers}
+\subtitle{A CI hygiene tool that is honest about not being a secret store}
+\date{}
+
+\begin{document}
+
+\begin{frame}[plain]
+  \titlepage
+  \audience{GitHub Actions · Kubernetes · Helm · Argo · Terraform · AWS SM + ESO}
+  \begin{center}\footnotesize
+  \textcolor{evnxMuted}{evnx 0.5.2. Every terminal block is a real run.}
+  \end{center}
+\end{frame}
+
+% =========================================================================
+\begin{frame}{This deck in one slide}
+  \begin{block}{The recommendation, up front}
+    Adopt the \textbf{CLI} across all 40 repos as a CI gate. Use \textbf{evnx
+    cloud} for developer-local environments only. Do \textbf{not} plan to
+    replace AWS Secrets Manager with it this year.
+  \end{block}
+
+  \vspace{0.7em}
+  \begin{block}{Why that split}
+    The things you need from a hygiene tool --- a container image, a real exit
+    contract, stable SARIF, many output formats --- are all finished. The
+    things you need from a \emph{platform} secret store --- machine
+    identities, org policy, SSO, rotation, ESO integration --- are not
+    started. Pretending otherwise wastes your quarter.
+  \end{block}
+
+  \saythis{Leading with the limits is what gets this audience to listen to the rest.}
+\end{frame}
+
+\begin{frame}{Contents}\tableofcontents[hideallsubsections]\end{frame}
+
+% =========================================================================
+\section{Before lunch}
+
+\begin{frame}{Three tickets and an image}
+  \small
+  \begin{block}{The tickets}
+    ``Add \texttt{FEATURE\_X\_URL} to staging.'' ``Prod is missing
+    \texttt{SENTRY\_DSN}.'' ``Rotate the Stripe key everywhere.''
+  \end{block}
+
+  \begin{block}{The rotation, in full}
+    Update AWS SM → re-sync ExternalSecrets → restart pods → update two GitHub
+    environments → discover the key is \emph{also} hard-coded in a Helm values
+    file from 2023.
+  \end{block}
+
+  \begin{block}{The afternoon}
+    An image in GHCR turns out to contain \file{.env}. The service's Dockerfile
+    does \texttt{COPY . .} with no \file{.dockerignore}.
+  \end{block}
+
+  \vspace{0.4em}
+  {\footnotesize evnx addresses the \textbf{last} one properly, the first two
+  partially, and the rotation not at all. The rest of this deck is which is which.}
+\end{frame}
+
+% =========================================================================
+\section{The CI primitives}
+
+\begin{frame}{No install step}
+  \begin{center}\large\ttfamily
+  docker run -{}-rm -v "\$PWD:/work" ghcr.io/urwithajit9/evnx scan
+  \end{center}
+
+  \vspace{1em}
+  \begin{itemize}
+    \item One image, pinnable by tag, usable as a \texttt{container:} in a
+          reusable workflow --- no \texttt{setup-} action, no toolchain, no
+          cache key.
+    \item The prebuilt binaries are built with \texttt{-{}-all-features}, so
+          \texttt{migrate}, \texttt{backup} and \texttt{cloud} are all present.
+          Only \cmd{cargo install evnx} compiles with \texttt{default = []}
+          and gives you 11 of 17 commands.
+    \item Also on Homebrew, Scoop, winget, npm, PyPI and as a Marketplace
+          action.
+  \end{itemize}
+
+  \vspace{0.7em}
+  {\footnotesize Check the GHCR package is public before you templatise it
+  across the org.}
+\end{frame}
+
+\begin{frame}[fragile]{The exit contract --- the slide that matters most}
+  \begin{center}
+  \begin{tabular}{@{}cll@{}}
+    \toprule
+    \textbf{Code} & \textbf{Means} & \textbf{Your gate should} \\
+    \midrule
+    \exitzero & clean                  & continue \\
+    \exitone  & a finding              & fail, and surface it \\
+    \exittwo  & \textbf{could not run} & fail --- \emph{this is not a pass} \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+
+  \vspace{0.6em}
+  \capturepart{persona/ops-06-exit2.txt}{1}{9}
+  \realrun{a path that does not exist}
+
+  \vspace{0.3em}
+  {\footnotesize \textbf{Action item:} audit any pipeline that treats every
+  non-zero as ``finding''. Under the old behaviour, \exittwo\ conditions
+  sometimes returned \exitzero\ --- a gate that could not run looked green.}
+\end{frame}
+
+\begin{frame}[fragile]{Annotations on the right lines}
+  \capture{persona/ops-01-validate-github.txt}
+  \realrun{\texttt{evnx validate -{}-format github}}
+
+  \vspace{0.3em}
+  {\footnotesize Workflow-command format, correct \texttt{file=} and
+  \texttt{line=}, \texttt{\%0A} for multi-line suggestions. Annotations land on
+  the diff, so a reviewer sees the finding without opening the log.}
+\end{frame}
+
+\begin{frame}[fragile]{SARIF that does not reset your alerts}
+  \capturepart{persona/ops-02-scan-sarif.txt}{1}{31}
+  \realrun{\texttt{evnx scan . -{}-format sarif}}
+
+  \vspace{0.3em}
+  {\footnotesize Stable \texttt{ruleId}, a \texttt{rules[]} block with
+  \texttt{helpUri}, and \texttt{partialFingerprints} keyed on
+  \texttt{file::variable::rule}. That fingerprint is what stops GitHub code
+  scanning from closing and reopening every alert on each run. Expect
+  \textbf{one} alert reset when you upgrade to it, then stability.}
+\end{frame}
+
+\begin{frame}[fragile]{Stream separation --- why the pipe above is safe}
+  \begin{block}{The rule}
+    Machine formats (\texttt{json}, \texttt{sarif}, \texttt{github}) go to
+    \textbf{stdout}. Human trailers --- the ``Docs:'' line, next steps,
+    summaries --- go to \textbf{stderr}.
+  \end{block}
+
+  \vspace{0.7em}
+\begin{lstlisting}[style=evnxcode]
+evnx scan . --format sarif > evnx.sarif || test $? -eq 1
+\end{lstlisting}
+
+  \vspace{0.5em}
+  {\footnotesize The redirect captures clean SARIF. The \texttt{|| test \$? -eq 1}
+  lets findings upload as alerts while still failing the job on \exittwo\ ---
+  adjust to your policy, but make the \exittwo\ case explicit.}
+\end{frame}
+
+\begin{frame}[fragile]{The reusable workflow}
+\begin{lstlisting}[style=evnxcode]
+on: [pull_request]
+jobs:
+  env-hygiene:
+    runs-on: ubuntu-latest
+    container: ghcr.io/urwithajit9/evnx:0.5.0
+    steps:
+      - uses: actions/checkout@v4
+      - run: evnx doctor --format json
+      - run: evnx sync --check
+      - run: evnx validate --format github
+      - run: evnx scan . --format sarif > evnx.sarif || test $? -eq 1
+      - uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with: { sarif_file: evnx.sarif }
+\end{lstlisting}
+  {\footnotesize Drop this in an org template repo. It is the whole A-stage
+  answer.}
+\end{frame}
+
+% =========================================================================
+\section{The failure mode to know about}
+
+\begin{frame}[fragile]{A scanner's worst outcome is a confident pass}
+  \capture{persona/fe-01-scan-dist.txt}
+  \realrun{\file{dist/bundle.js} contains a live \texttt{sk\_live\_} key}
+
+  \vspace{0.4em}
+  \begin{trap}{\file{dist/} and \file{build/} are on the default exclusion list}
+    Excluding build output is correct when scanning a repo. It is wrong when
+    the excluded directory is the path you \emph{asked} for --- and evnx says
+    ``✓ No secrets detected'', ``0 files scanned'', exit \exitzero.
+    \file{src/commands/scan/filters.rs:106}. Tracked \textbf{NEW-1, P0}.
+  \end{trap}
+
+  \vspace{0.3em}
+  {\footnotesize Same for \file{.ipynb}, which is not in the scannable
+  extension allowlist at all (\textbf{NEW-2}).}
+\end{frame}
+
+\begin{frame}[fragile]{Assert the denominator, not just the exit code}
+  \capture{persona/ops-09-files-scanned.txt}
+  \vspace{-0.2em}
+\begin{lstlisting}[style=evnxcode]
+# fail if the scan looked at nothing
+n=$(evnx scan "$TARGET" --format json | jq '.files_scanned')
+test "$n" -gt 0 || { echo "scan covered no files"; exit 1; }
+\end{lstlisting}
+
+  \vspace{0.8em}
+  \begin{block}{Generalise it}
+    This is not an evnx-specific hack. Any coverage-based gate --- linters,
+    scanners, test runners --- can pass by looking at nothing. Assert the
+    denominator in every one of them.
+  \end{block}
+
+  \saythis{This slide travels well beyond evnx, which is why it is worth
+  keeping even after NEW-1 is fixed.}
+\end{frame}
+
+% =========================================================================
+\section{Conversion and migration}
+
+\begin{frame}[fragile]{\cmd{convert} --- 14 targets, all plaintext}
+  \capture{persona/ops-03-convert-tf.txt}
+  \realrun{\texttt{evnx convert -{}-to terraform}}
+
+  \vspace{0.3em}
+  {\footnotesize Also: \texttt{json, yaml, shell, aws-secrets, gcp-secrets,
+  azure-keyvault, github-actions, docker-compose, kubernetes, doppler, heroku,
+  vercel, railway}. \textbf{Pipe, never commit.}}
+
+  \vspace{0.4em}
+  \begin{trap}{The Terraform caveat you already know}
+    \texttt{TF\_VAR\_*} and tfvars mean the value ends up in
+    \textbf{Terraform state}, in plaintext. evnx converting the format does not
+    change that. There is no Terraform provider for evnx.
+  \end{trap}
+\end{frame}
+
+\begin{frame}[fragile]{\cmd{migrate} is a command generator}
+  \capturepart{persona/ops-08-migrate-live-aws.txt}{1}{19}
+  \realrun{\texttt{evnx migrate -{}-to aws-secrets-manager} --- \textbf{no} \flag{-{}-dry-run}}
+
+  \vspace{0.3em}
+  \begin{correction}{eight of nine destinations contact nothing}
+    They print the platform's own CLI commands so an operator can review and
+    audit before running them. Only \texttt{github-actions} actually transfers
+    (sealed box → REST). Until v0.5.0 the summary said ``\texttt{N uploaded}''
+    for all nine, which was misleading; the banner now reads ``Generate
+    destination commands''.
+  \end{correction}
+\end{frame}
+
+\begin{frame}[fragile]{Two \cmd{migrate} behaviours worth relying on}
+  \capturepart{persona/ops-04-migrate-dry.txt}{1}{12}
+  \realrun{\flag{-{}-dry-run} \emph{without} \flag{-{}-secret-name}}
+
+  \vspace{0.4em}
+  \begin{itemize}\footnotesize
+    \item \flag{-{}-dry-run} still demands the required arguments --- rather
+          than printing a command with a placeholder where the name goes.
+    \item A non-interactive run must pass \flag{-{}-to}. It no longer guesses
+          the destination.
+    \item \flag{-{}-skip-existing} / \flag{-{}-overwrite} are \textbf{inert}
+          for the eight command-generating destinations. No error if you pass
+          them.
+  \end{itemize}
+\end{frame}
+
+% =========================================================================
+\section{Where it is not a platform tool}
+
+\begin{frame}{The five gaps, stated plainly}
+  \small
+  \begin{tabular}{@{}clp{6.4cm}@{}}
+    \toprule
+    & \textbf{Gap} & \textbf{Consequence for you} \\
+    \midrule
+    \unsolved & \textbf{Machine identities} & CI pulling from a vault needs the
+      \emph{master password} plus a token. That is a human credential in a
+      pipeline. This is the single blocker for broad cloud adoption \\
+    \unsolved & Rotation \& dynamic secrets & no leases, no short-lived DB
+      credentials. Keep AWS SM rotation \\
+    \unsolved & Terraform provider          & no IaC-managed vaults \\
+    \partialmark & Org policy \& audit export & per-vault audit log and
+      \cmd{cloud history} exist; no SIEM export, SSO/SCIM or admin console \\
+    \partialmark & Offboarding across vaults & \cmd{vault revoke} re-keys the
+      vault properly, but there is no ``remove user everywhere'' \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.6em}
+  \saythis{``If someone tells you this replaces Vault or Secrets Manager this
+  year, they have not read the machine-identity row.''}
+\end{frame}
+
+\begin{frame}{And two you might expect but should not}
+  \small
+  \begin{block}{Image layers}
+    \cmd{evnx scan .} runs \emph{before} \texttt{docker build}. It does not
+    inspect image layers and \cmd{doctor} does not check
+    \file{.dockerignore} --- so the GHCR incident from slide 5 is caught only
+    if the \file{.env} is also in the working tree at scan time.
+  \end{block}
+
+  \begin{block}{Git history}
+    \cmd{scan} looks at the working tree. Historical commits are not its focus
+    --- pair it with gitleaks or trufflehog for history, and use evnx as the
+    pre-commit and PR gate that stops new ones.
+  \end{block}
+
+  \vspace{0.4em}
+  {\footnotesize Both are honest scoping decisions rather than oversights, but
+  neither is obvious from the README.}
+\end{frame}
+
+\begin{frame}{Two sources of truth, and how to keep it sane}
+  \begin{block}{The split that works}
+    \begin{tabular}{@{}ll@{}}
+      \textbf{Developer-local} & evnx vaults are the source of truth \\
+      \textbf{Staging / prod}  & AWS SM remains the source of truth \\
+      \textbf{The contract between them} & \file{.env.example}, checked in CI \\
+    \end{tabular}
+  \end{block}
+
+  \vspace{0.8em}
+  \begin{block}{Closing the ``new variable is missing in prod'' gap today}
+    There is no direct ``compare vault vs AWS SM''. Export the target to a
+    file and \cmd{evnx diff} against it --- or enforce \file{.env.example} as
+    the contract with \cmd{sync -{}-check} on every PR, which catches the
+    variable before it reaches a deploy.
+  \end{block}
+\end{frame}
+
+% =========================================================================
+\section{Adoption}
+
+\begin{frame}[fragile]{Rollout in three steps}
+\begin{lstlisting}[style=evnxcode]
+# 1. org template repo -- the reusable workflow, pinned by tag
+#    (slide 10). Roll to 40 repos via a required check.
+
+# 2. pre-commit, same three hooks everywhere
+repos:
+  - repo: https://github.com/urwithajit9/evnx
+    rev: v0.5.0
+    hooks: [{id: evnx-scan}, {id: evnx-validate}, {id: evnx-diff}]
+
+# 3. shared detector rules, committed
+#    .evnx.toml
+[[scan.patterns]]
+name  = "Acme internal token"
+regex = "ACME-[A-Z0-9]{32}"
+\end{lstlisting}
+  {\footnotesize Step 3 is what makes the gate org-specific rather than
+  generic --- and it is committed, so it reviews like code.}
+\end{frame}
+
+\begin{frame}{The scorecard, honestly}
+  \begin{center}
+  \begin{tabular}{@{}clp{6.2cm}@{}}
+    \toprule
+    & \textbf{Count} & \textbf{Items} \\
+    \midrule
+    \solved     & 6 & container image, exit contract, stable SARIF, all convert targets, bulk migrate, org-wide secret scanning \\
+    \partialmark & 8 & per-repo standards, target drift, developer/platform split, Helm values, image contents, audit, offboarding, Terraform vars \\
+    \unsolved   & 3 & \textbf{machine identities}, rotation, Terraform provider \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+
+  \vspace{0.7em}
+  \begin{block}{One sentence}
+    A solid CI hygiene and conversion tool. Not yet a platform secret store ---
+    and the roadmap agrees with that assessment rather than arguing with it.
+  \end{block}
+\end{frame}
+
+\begin{frame}{What is coming, in priority order}
+  \small
+  \begin{tabular}{@{}clp{5.6cm}@{}}
+    \toprule
+    & \textbf{Feature} & \textbf{Unblocks} \\
+    \midrule
+    P0 & Scan an explicitly-named excluded path & the confident-pass failure \\
+    1  & Machine identities / service accounts (vault-scoped, no master password) & CI and cluster adoption \\
+    2  & Org policy: shared config, required checks, central view & 40 repos, one standard \\
+    3  & \cmd{diff -{}-against aws:…\textbar k8s:ns/secret\textbar github:env} & ``missing in prod'' \\
+    4  & External Secrets Operator provider & the two-sources-of-truth split \\
+    5  & \cmd{scan -{}-image ghcr.io/…} + \file{.dockerignore} in \cmd{doctor} & the GHCR incident \\
+    6  & SSO/SCIM, audit export, org-wide offboarding & compliance \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}[plain]
+  \vfill
+  \begin{center}
+    {\LARGE\textbf{Questions}}\\[1.2em]
+    {\small \url{https://www.evnx.dev/guides} · \url{https://github.com/urwithajit9/evnx}}\\[0.8em]
+    {\footnotesize\textcolor{evnxMuted}{evnx 0.5.2 · every terminal block is a real run}}
+  \end{center}
+  \vfill
+\end{frame}
+
+\end{document}

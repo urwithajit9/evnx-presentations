@@ -1,0 +1,11 @@
+$ evnx scan notebooks/ --severity high
+
+  evnx scan  Checking for exposed secrets
+
+  scanning notebooks/explore.json
+
+  ✓  No secrets detected
+
+  1 file scanned
+  Docs: https://www.evnx.dev/guides/commands/scan
+exit=0

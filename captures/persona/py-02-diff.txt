@@ -1,0 +1,22 @@
+$ evnx diff
+
+  evnx diff  .env ↔ .env.example
+
+Missing from .env (present in .env.example):
+  + APP_FEATURE_FLAGS_URL
+
+Different values:
+  ~ DEBUG
+  ~ SECRET_KEY
+    .env.example: ***
+    .env: yo***
+  ~ DATABASE_URL
+  ~ CELERY_BROKER_URL
+  ~ STRIPE_SECRET_KEY
+    .env.example: ***
+    .env: ch***
+  ~ SENTRY_DSN
+
+  1 missing from .env  ·  6 different values
+  Docs: https://www.evnx.dev/guides/commands/diff
+exit=1

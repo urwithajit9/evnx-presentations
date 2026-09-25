@@ -1,0 +1,364 @@
+% ===========================================================================
+%  evnx for PHP Agencies  —  Laravel, Symfony, many clients, many freelancers
+%  Persona PT.  Build: pdflatex -interaction=nonstopmode php-agency.tex
+% ===========================================================================
+\documentclass[aspectratio=169,10pt]{beamer}
+
+\newcommand{\capturedir}{../captures}
+\input{persona-preamble}
+
+\title{evnx for PHP agencies}
+\subtitle{Thirty clients, rotating freelancers, and credentials in email}
+\date{}
+
+\begin{document}
+
+\begin{frame}[plain]
+  \titlepage
+  \audience{Laravel · Symfony · WordPress · Forge / cPanel · freelancers}
+  \begin{center}\footnotesize
+  \textcolor{evnxMuted}{evnx 0.5.2. Every terminal block is a real run.}
+  \end{center}
+\end{frame}
+
+% =========================================================================
+\begin{frame}{This deck in one slide}
+  \begin{block}{Your problem is not technical, it is a channel problem}
+    Client credentials live in email threads, zip files and Slack. Nobody can
+    answer ``which keys did that freelancer see?'' evnx's biggest win for an
+    agency is \textbf{replacing the channel} --- and that part works today.
+  \end{block}
+
+  \vspace{0.7em}
+  \begin{block}{Two expectations to reset before you buy in}
+    \begin{enumerate}
+      \item There is \textbf{no ``remove this person from all vaults''}.
+            Offboarding is per-vault, and with thirty clients that is a list
+            you maintain.
+      \item \cmd{validate} has \textbf{no Laravel rules}. It will not tell you
+            \texttt{APP\_DEBUG=true} is wrong in production. We will prove it.
+    \end{enumerate}
+  \end{block}
+\end{frame}
+
+\begin{frame}{Contents}\tableofcontents[hideallsubsections]\end{frame}
+
+% =========================================================================
+\section{A week at the agency}
+
+\begin{frame}{Four things that already happened}
+  \small
+  \begin{block}{Monday}
+    A freelancer starts on Client B's Laravel shop. You zip the project's
+    \file{.env} and email it --- including the client's live payment keys and
+    SMTP password.
+  \end{block}
+
+  \begin{block}{Wednesday}
+    A client calls: their site is showing a Laravel error page with stack
+    traces. Someone deployed with \texttt{APP\_DEBUG=true}.
+  \end{block}
+
+  \begin{block}{Thursday}
+    A scanner reports \texttt{https://clientc.example/.env} is downloadable.
+    The vhost document root points at the project root instead of
+    \file{public/}.
+  \end{block}
+
+  \begin{block}{Friday}
+    The freelancer's contract ends. You are not sure which keys they saw
+    across three projects.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Scored honestly}
+  \small
+  \begin{tabular}{@{}llp{6.0cm}@{}}
+    \toprule
+    \textbf{Day} & & \textbf{Where it lands} \\
+    \midrule
+    Monday   & \solved   & vault + \cmd{vault share}. This is the whole pitch \\
+    Wednesday& \unsolved & no debug-in-production rule. Verified on slide 9 \\
+    Thursday & \unsolved & server configuration. Add a \texttt{curl} check to your go-live script \\
+    Friday   & \partialmark & \cmd{vault revoke} re-keys properly, per vault. No cross-vault report \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.9em}
+  \saythis{``One clean win, one partial, two that evnx does not touch. I would
+  still adopt it for the first one alone --- but let us go through all four.''}
+\end{frame}
+
+% =========================================================================
+\section{The channel}
+
+\begin{frame}[fragile]{One vault per client project per environment}
+\begin{lstlisting}[style=evnxcode]
+# naming convention that survives 30 clients
+evnx vault create clientb-shop --env staging
+evnx vault create clientb-shop --env production   # leads only
+
+# onboard a freelancer
+evnx vault share clientb-shop/staging --with freelancer@example.com
+
+# contract ends
+evnx vault revoke clientb-shop/staging --user freelancer@example.com
+# then rotate the client provider keys they could see
+\end{lstlisting}
+
+  \vspace{0.5em}
+  \begin{block}{Two details}
+    The flag is \flag{-{}-with} on \cmd{share} and \flag{-{}-user} on
+    \cmd{revoke} --- an inconsistency on the backlog, and the kind of thing
+    that costs you five minutes in front of a client.
+    \textbf{Revocation re-keys the vault}, so a departing freelancer's retained
+    key cannot open versions pushed after they left.
+  \end{block}
+\end{frame}
+
+\begin{frame}{``Rotate anyway'' --- and why to say it out loud}
+  \begin{block}{What revocation does and does not do}
+    It stops them reading \textbf{future} versions. It cannot un-see what they
+    already read. Every provider key that freelancer had access to is still
+    compromised in the ordinary sense.
+  \end{block}
+
+  \vspace{0.9em}
+  \begin{block}{So the offboarding checklist is}
+    \begin{enumerate}
+      \item \cmd{vault revoke} on every vault they were on --- from your own
+            list, because there is no cross-vault query
+      \item Rotate the client's provider keys
+      \item Push the new values, tell the remaining team to \cmd{cloud pull}
+    \end{enumerate}
+  \end{block}
+
+  \vspace{0.4em}
+  {\footnotesize Step 1 being manual is the honest cost. It is item 1 on this
+  audience's roadmap.}
+\end{frame}
+
+\begin{frame}{And the zero-knowledge claim, for the client conversation}
+  \small
+  \begin{block}{What you can tell a client}
+    Their \file{.env} is encrypted on your machine before it is uploaded. The
+    server stores ciphertext and cannot read it --- not with database access,
+    not under subpoena. Sharing uses a hybrid X25519 + ML-KEM-768 wrap, so a
+    share is not harvest-now-decrypt-later bait.
+  \end{block}
+
+  \vspace{0.6em}
+  \begin{block}{What you should also tell them}
+    Recipient public keys come from the server. A malicious server could
+    substitute its own and read what you share. There is no out-of-band
+    fingerprint verification yet.
+  \end{block}
+
+  \vspace{0.5em}
+  \saythis{Agencies get asked ``is this secure?'' by non-technical clients. A
+  clean two-paragraph answer with one honest caveat is worth more than a
+  marketing sentence.}
+\end{frame}
+
+% =========================================================================
+\section{Framework reality}
+
+\begin{frame}[fragile]{A Laravel \file{.env} that should alarm you}
+\begin{lstlisting}[style=evnxcode]
+APP_NAME=ClientShop
+APP_ENV=production
+APP_KEY=
+APP_DEBUG=true
+DB_PASSWORD=changeme
+MAIL_PASSWORD=hunter2
+STRIPE_SECRET=sk_live_51H8xQ2KZvNbGtRsPmWcYdLfE9AjXoTuV
+\end{lstlisting}
+
+  \vspace{0.5em}
+  Empty \texttt{APP\_KEY}. Debug on in production. Two default passwords. A
+  live Stripe key.
+
+  \vspace{0.6em}
+  \saythis{``Which of these does \texttt{validate} catch? Guess before I run it.''}
+\end{frame}
+
+\begin{frame}[fragile]{\cmd{evnx validate -{}-strict}}
+  \capturepart{persona/php-01-validate.txt}{1}{26}
+  \realrun{5 errors, exit \exitone}
+\end{frame}
+
+\begin{frame}{Four of five --- and the one that is missing matters}
+  \small
+  \begin{tabular}{@{}clp{6.4cm}@{}}
+    \toprule
+    & \textbf{Issue} & \textbf{Rule} \\
+    \midrule
+    \solved & \texttt{APP\_KEY=} empty          & placeholder + weak secret \\
+    \solved & \texttt{DB\_PASSWORD=changeme}    & placeholder + weak secret \\
+    \solved & \texttt{MAIL\_PASSWORD=hunter2}   & weak secret \\
+    \unsolved & \texttt{APP\_DEBUG=true} with \texttt{APP\_ENV=production} & \textbf{no such rule exists} \\
+    \unsolved & The live Stripe key             & \cmd{validate}'s job is hygiene; \cmd{scan} finds this one \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.8em}
+  \begin{correction}{there is no debug-in-production check}
+    The persona research lists this as ``partial''. It is not implemented at
+    all. The nearest rule is \texttt{check\_localhost\_docker}, which triggers
+    on Docker config, not on \texttt{APP\_ENV}. Until framework rule packs
+    ship, this is a \texttt{grep} in your deploy script.
+  \end{correction}
+\end{frame}
+
+\begin{frame}[fragile]{\cmd{scan} catches what \cmd{validate} will not}
+  \capturepart{persona/php-02-scan.txt}{1}{16}
+  \realrun{\texttt{evnx scan .env}}
+
+  \vspace{0.3em}
+  {\footnotesize Two mechanisms: the Stripe \textbf{value} pattern at
+  \texttt{high}, and \texttt{MAIL\_PASSWORD} by \textbf{variable name} at
+  \texttt{medium} --- with \texttt{<7 chars>} shown instead of the value.
+  \textbf{Run both commands. They are not substitutes for each other.}}
+\end{frame}
+
+\begin{frame}[fragile]{Symfony: evnx validates one file, Symfony layers several}
+  \capture{persona/php-06-symfony-local.txt}
+  \realrun{\file{.env} has \texttt{APP\_ENV}; \file{.env.local} overrides \texttt{APP\_SECRET} only}
+
+  \vspace{0.4em}
+  \begin{trap}{This is a false positive against Symfony's actual semantics}
+    Symfony reads \file{.env} \emph{then} \file{.env.local}, so
+    \texttt{APP\_ENV} resolves fine at runtime. evnx compared
+    \file{.env.local} against \file{.env.example} in isolation and called it
+    missing. \textbf{evnx has no model of any framework's load order.}
+  \end{trap}
+
+  \vspace{0.4em}
+  {\footnotesize Practical answer: validate \file{.env} (the committed
+  defaults) and \cmd{scan} \file{.env.local}. And expect \cmd{doctor} to warn
+  that \file{.env} is tracked in git --- which is correct for Symfony, so
+  ignore that one deliberately.}
+\end{frame}
+
+% =========================================================================
+\section{Go-live}
+
+\begin{frame}[fragile]{\cmd{doctor} on the server before hand-over}
+  \capturepart{persona/php-03-doctor.txt}{1}{22}
+  \realrun{\texttt{evnx doctor}}
+
+  \vspace{0.3em}
+  {\footnotesize \file{.env} not in \file{.gitignore}, \file{.env.example} not
+  tracked, permissions \texttt{664} instead of \texttt{600}. Two of the three
+  are \flag{-{}-fix}-able. Needs evnx installed on the box --- which rules out
+  most shared hosting.}
+\end{frame}
+
+\begin{frame}[fragile]{The check evnx does not have, and you need}
+\begin{lstlisting}[style=evnxcode]
+# go-live gate -- must not print 200
+for path in /.env /.git/config /storage/logs/laravel.log; do
+  code=$(curl -s -o /dev/null -w "%{http_code}" "https://$SITE$path")
+  echo "$path -> $code"
+  [ "$code" = "200" ] && { echo "EXPOSED"; exit 1; }
+done
+\end{lstlisting}
+
+  \vspace{0.7em}
+  \begin{block}{Thursday's incident, closed}
+    evnx checks the \textbf{file}. It cannot check what your webserver serves.
+    A web-exposure probe is item 3 on the roadmap; this loop is the whole
+    workaround and it takes five minutes to add.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Heroku and the hosting panels}
+  \capturepart{persona/php-04-heroku.txt}{1}{18}
+  \realrun{\texttt{evnx convert -{}-to heroku} --- a script you review, then run}
+
+  \vspace{0.3em}
+  {\footnotesize \cmd{migrate -{}-to heroku} requires \flag{-{}-heroku-app},
+  and \flag{-{}-dry-run} still demands it rather than printing a placeholder.
+  \textbf{No Forge, Ploi, Laravel Cloud or cPanel targets} --- for those,
+  \cmd{convert -{}-to shell} and paste, or \cmd{cloud pull} on the VPS.}
+\end{frame}
+
+% =========================================================================
+\section{Adoption}
+
+\begin{frame}[fragile]{Copy-paste: the agency workflow}
+\begin{lstlisting}[style=evnxcode]
+# per client project
+evnx vault create clientb-shop --env staging
+evnx cloud link clientb-shop/staging && evnx cloud push
+
+# freelancer on / off
+evnx vault share  clientb-shop/staging --with freelancer@example.com
+evnx vault revoke clientb-shop/staging --user freelancer@example.com
+
+# every project, same gates
+evnx validate --strict
+evnx scan .
+evnx doctor --fix
+
+# go-live checklist
+evnx validate --strict && evnx doctor
+grep -q '^APP_DEBUG=false' .env || { echo "debug on in prod"; exit 1; }
+curl -s -o /dev/null -w "%{http_code}\n" https://clientb.example/.env
+\end{lstlisting}
+  {\footnotesize The \texttt{grep} and the \texttt{curl} are the two rules evnx
+  does not have. Keep them until it does.}
+\end{frame}
+
+\begin{frame}{The scorecard, honestly}
+  \begin{center}
+  \begin{tabular}{@{}clp{6.2cm}@{}}
+    \toprule
+    & \textbf{Count} & \textbf{Items} \\
+    \midrule
+    \solved     & 6 & credential channel, \texttt{APP\_KEY} hygiene, committed secrets, inbox sprawl, Heroku, pre-go-live checks \\
+    \partialmark & 7 & offboarding, access visibility, 30-project consistency, Symfony layering, Laravel \texttt{env:encrypt}, hosting panels, debug-in-prod \\
+    \unsolved   & 3 & \texttt{config:cache} behaviour, WordPress constants, web-root exposure \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+
+  \vspace{0.7em}
+  \begin{block}{One sentence}
+    For an agency the win is the channel and the per-client vault. The gaps are
+    all about \textbf{scale across clients} --- offboarding, access reports,
+    hosting-panel integration --- which is exactly what a twelve-person agency
+    feels most.
+  \end{block}
+\end{frame}
+
+\begin{frame}{What is coming, in priority order}
+  \small
+  \begin{tabular}{@{}clp{5.6cm}@{}}
+    \toprule
+    & \textbf{Feature} & \textbf{Fixes} \\
+    \midrule
+    1 & Workspaces: ``remove user from all vaults'' + an access report & Friday \\
+    2 & Framework rule packs --- Laravel (\texttt{APP\_DEBUG} in prod, \texttt{APP\_KEY} format), Symfony (layered \file{.env}) & Wednesday, and the false positive \\
+    3 & \cmd{doctor -{}-url https://site} probing \texttt{/.env}, \texttt{/.git/config} & Thursday \\
+    4 & Forge / Ploi / Laravel Cloud / Platform.sh targets & the paste step \\
+    5 & Time-limited sharing (\flag{-{}-expires 42d}) & freelancer contracts \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.7em}
+  {\footnotesize Item 5 would make Friday structural instead of procedural ---
+  the access ends when the contract does, whether or not anyone remembers.}
+\end{frame}
+
+\begin{frame}[plain]
+  \vfill
+  \begin{center}
+    {\LARGE\textbf{Questions}}\\[1.2em]
+    {\small \url{https://www.evnx.dev/guides} · \url{https://github.com/urwithajit9/evnx}}\\[0.8em]
+    {\footnotesize\textcolor{evnxMuted}{evnx 0.5.2 · every terminal block is a real run}}
+  \end{center}
+  \vfill
+\end{frame}
+
+\end{document}
