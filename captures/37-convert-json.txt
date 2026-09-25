@@ -1,0 +1,15 @@
+$ evnx convert --to json
+  config    .evnx.toml
+{
+  "APP_NAME": "orders-api",
+  "DEBUG": "false",
+  "DATABASE_URL": "postgresql+asyncpg://api:s3cr3t@localhost:5432/orders",
+  "REDIS_URL": "redis://:devpass@localhost:6379/0",
+  "SECRET_KEY": "42080e95041b83f5085602c0ebd21a2cfb7e4daa077763bbd5e22a3bd54d7331",
+  "SENDGRID_API_KEY": "SG.aBcDeFgHiJkLmNoPqRsTuV.wXyZ1234567890aBcDeFgHiJkLmNoPq",
+  "STRIPE_SECRET_KEY": "sk_live_51QwErTyUiOpAsDfGhJkLzXcVbNm1234567890",
+  "SENTRY_DSN": "your_value_here"
+}
+  Docs: https://www.evnx.dev/guides/commands/convert
+
+[exit 0]

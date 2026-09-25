@@ -1,0 +1,6 @@
+$ evnx cloud status --server http://evil.example.com
+Error: invalid --server value: refusing plain http:// to evil.example.com: the access and refresh tokens travel in request headers. Use https://, or a loopback address for local development.
+
+No verdict: evnx did not finish. This is not a clean result.
+
+[exit 2]

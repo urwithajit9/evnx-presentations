@@ -1,0 +1,16 @@
+$ evnx diff --env-name production --against staging --no-color
+
+  evnx diff  ./.env.production ↔ ./.env.staging
+
+Missing from ./.env.production (present in ./.env.staging):
+  + STAGING_ONLY
+
+Different values:
+  ~ APP_ENV
+  ~ DATABASE_URL
+  ~ DEBUG
+
+  1 missing from ./.env.production  ·  3 different values
+  Docs: https://www.evnx.dev/guides/commands/diff
+
+[exit 1]

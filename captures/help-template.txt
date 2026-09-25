@@ -1,0 +1,53 @@
+$ evnx template --help
+Generate config files from templates
+
+Usage: evnx template [OPTIONS] --input <INPUT> --output <OUTPUT>
+
+Options:
+      --input <INPUT>
+          The template to render. `{{ VAR }}` and `${VAR}` are substituted
+
+      --output <OUTPUT>
+          Where to write the rendered file.
+          
+          ⚠️ The result usually contains real values — see `--gitignore`.
+
+      --env <ENV>
+          The environment file to take values from.
+          
+          Defaults to `.env`, or `[defaults] env_name` from `.evnx.toml`.
+
+      --env-name <NAME>
+          Operate on `.env.<NAME>` instead of `.env`.
+          
+          `--env-name production` resolves to `.env.production`. A name whose file does not exist is an error listing the environments that do — it never falls back to `.env`.
+
+      --gitignore
+          Automatically add the output file to .gitignore (no prompt). Useful in CI scripts. Mutually exclusive with --no-gitignore
+
+      --no-gitignore
+          Skip all .gitignore checks and warnings. Use when you manage .gitignore externally. Mutually exclusive with --gitignore
+
+      --strict
+          Refuse to write when a placeholder has no value.
+          
+          Without it an unresolved `{{DATABASE_URL}}` is copied through literally and the command exits 0 — the generated file then holds the placeholder text where a value should be, and whatever reads it next treats that as the setting.
+          
+          Give a variable a fallback with `{{NAME|default:value}}` to keep it optional under --strict.
+
+  -v, --verbose
+          Enable verbose output
+
+  -q, --quiet
+          Suppress non-essential output
+
+      --no-color
+          Disable colored output
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+  -V, --version
+          Print version
+
+Full guide: https://www.evnx.dev/guides/commands/template

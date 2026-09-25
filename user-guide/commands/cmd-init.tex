@@ -1,0 +1,103 @@
+% ===========================================================================
+%  evnx init
+% ===========================================================================
+\section{evnx init}
+
+\begin{frame}{\cmd{evnx init} — start a project}
+  \textbf{Purpose.} Create \file{.env}, \file{.env.example} and a correct
+  \file{.gitignore} for a project that has none.
+
+  \vspace{0.6em}
+  \begin{block}{Synopsis}
+    \texttt{evnx init [OPTIONS]}
+  \end{block}
+
+  \vspace{0.4em}
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    \textbf{Flag} & \textbf{What it does} \\
+    \midrule
+    \flag{--detect}          & Read the project's \emph{manifests} and scaffold from them \\
+    \flag{--from-source}     & Read the project's \emph{code} and scaffold from that \\
+    \flag{--with <LIST>}     & Name components directly: \texttt{nextjs,postgresql} \\
+    \flag{--blueprint <ID>}  & A named stack, e.g. \texttt{t3\_modern} \\
+    \flag{--list-components} & Print everything \flag{--with} accepts, then exit \\
+    \flag{-y, --yes}         & Non-interactive; blank unless a stack is named \\
+    \flag{--force}           & Replace files that already exist \\
+    \flag{--path <PATH>}     & Where to write (default \texttt{.}) \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.5em}
+  {\footnotesize \textbf{Effectively run-once.} A second run refuses rather than
+  overwriting a \file{.env.example} you may have hand-maintained — exit \exittwo,
+  with \flag{--force} named as the way through.}
+\end{frame}
+
+\begin{frame}[fragile]{\cmd{init --detect} — scaffold from the manifest}
+  \capture{10-init-detect.txt}
+  \realrun{a directory containing only \file{package.json} with \texttt{next}}
+\end{frame}
+
+\begin{frame}[fragile]{What \flag{--detect} wrote}
+  \capture{10-init-detect-example.txt}
+
+  {\footnotesize Note the \file{.gitignore} line it generated:
+  \texttt{.env*, !.env.example, !.env.sample, !.env.template}. The negation is
+  the part people get wrong by hand.}
+\end{frame}
+
+\begin{frame}[fragile]{\cmd{init --from-source} — scaffold from the code}
+  Reads \texttt{process.env.X}, \texttt{os.getenv("X")},
+  \texttt{os.environ["X"]} and \texttt{std::env::var("X")}.
+
+  \capture{11-init-from-source.txt}
+
+  {\footnotesize It \emph{refuses} rather than guessing: no terminal and no
+  \flag{--yes} is exit \exittwo, and it names the exact command to proceed.}
+\end{frame}
+
+\begin{frame}[fragile]{\cmd{init --from-source --yes} — accepted}
+  \capture{11b-init-from-source-yes.txt}
+
+  \begin{block}{Why this is the best mode}
+    It is derived from what the code \emph{actually reads}, so it answers
+    ``is my \file{.env.example} complete?'' from evidence rather than from a
+    dependency list. Output is deterministic and each entry carries a
+    \texttt{file:line} citation.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{\cmd{init --with} — name the stack}
+  \capture{12-init-with.txt}
+  \realrun{\texttt{evnx init --with nextjs,postgresql,stripe -y}}
+
+  {\footnotesize Discover the vocabulary with \cmd{evnx init --list-components}.}
+\end{frame}
+
+\begin{frame}[fragile]{The generated \file{.env}}
+  \capturepart{12-init-with-env.txt}{1}{16}
+
+  {\footnotesize \textbf{Changed in v0.5.0:} \file{.env} is written with
+  \emph{active assignments}. It previously wrote every line commented as
+  \texttt{\# TODO:}, which meant \cmd{evnx validate} — init's own suggested next
+  step — reported every variable missing.}
+\end{frame}
+
+\begin{frame}[fragile]{When to use which mode}
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    \textbf{Situation} & \textbf{Use} & \textbf{Why} \\
+    \midrule
+    Existing codebase      & \flag{--from-source} & Evidence from the code itself \\
+    Fresh scaffold         & \flag{--detect}      & Manifest already declares the stack \\
+    Known stack, scripted  & \flag{--with}        & Explicit, reproducible, CI-safe \\
+    Greenfield, exploring  & (interactive)        & Guided walk \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{1em}
+  \begin{block}{Re-running is refused, not silently destructive}
+    \capture{15-init-rerun.txt}
+  \end{block}
+\end{frame}

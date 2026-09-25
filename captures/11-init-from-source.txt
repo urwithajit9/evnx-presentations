@@ -1,0 +1,22 @@
+$ /home/ajit/Pictures/ajit/evnx-cloud/evnx/target/release/evnx init --from-source
+
+  evnx init  Set up environment variables for your project
+
+
+  scanned 3 source files
+
+  5 variables read by the code
+     DATABASE_URL                 src/db.ts:1
+     NEXT_PUBLIC_SITE_URL         src/db.ts:3
+     QUEUE_URL                    src/worker.py:3
+     RUST_SERVICE_KEY             src/main.rs:1
+     STRIPE_SECRET_KEY            src/db.ts:2
+
+  0 already in .env.example  ·  5 new
+Error: found 5 variables the code reads that .env.example does not declare, but there is nobody to confirm with.
+
+Accept them:  evnx init --from-source --yes
+
+No verdict: evnx did not finish. This is not a clean result.
+
+[exit 2]

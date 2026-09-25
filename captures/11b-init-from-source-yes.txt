@@ -1,0 +1,20 @@
+$ /home/ajit/Pictures/ajit/evnx-cloud/evnx/target/release/evnx init --from-source --yes
+
+  evnx init  Set up environment variables for your project
+
+
+  scanned 3 source files
+
+  5 variables read by the code
+     DATABASE_URL                 src/db.ts:1
+     NEXT_PUBLIC_SITE_URL         src/db.ts:3
+     QUEUE_URL                    src/worker.py:3
+     RUST_SERVICE_KEY             src/main.rs:1
+     STRIPE_SECRET_KEY            src/db.ts:2
+
+  0 already in .env.example  ·  5 new
+✓ Created .env from template
+✓ Created .gitignore with .env*, !.env.example, !.env.sample, !.env.template
+✓ Added 5 variables from the source
+
+[exit 0]

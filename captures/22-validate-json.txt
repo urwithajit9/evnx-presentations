@@ -1,0 +1,56 @@
+$ evnx validate --format json
+  config    .evnx.toml
+{
+  "status": "failed",
+  "required_present": 7,
+  "required_total": 8,
+  "issues": [
+    {
+      "severity": "error",
+      "type": "missing_variable",
+      "variable": "SENTRY_DSN",
+      "message": "Missing required variable: SENTRY_DSN",
+      "location": ".env",
+      "suggestion": "Add SENTRY_DSN=<value> to .env",
+      "auto_fixable": true
+    },
+    {
+      "severity": "error",
+      "type": "placeholder_value",
+      "variable": "SECRET_KEY",
+      "message": "SECRET_KEY looks like a placeholder",
+      "location": ".env",
+      "suggestion": "Run: openssl rand -hex 32",
+      "auto_fixable": true
+    },
+    {
+      "severity": "warning",
+      "type": "boolean_trap",
+      "variable": "DEBUG",
+      "message": "DEBUG is set to \"False\" (string, not boolean)",
+      "location": ".env",
+      "suggestion": "Use false or 0 for proper boolean handling",
+      "auto_fixable": true
+    },
+    {
+      "severity": "error",
+      "type": "weak_secret",
+      "variable": "SECRET_KEY",
+      "message": "SECRET_KEY is too weak or predictable",
+      "location": ".env",
+      "suggestion": "Run: openssl rand -hex 32",
+      "auto_fixable": true
+    }
+  ],
+  "fixed": [],
+  "summary": {
+    "errors": 3,
+    "warnings": 1,
+    "style": 0,
+    "fixed_count": 0
+  }
+}
+Validation failed: 3 errors
+  Docs: https://www.evnx.dev/guides/commands/validate
+
+[exit 1]

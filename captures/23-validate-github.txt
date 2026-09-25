@@ -1,0 +1,10 @@
+$ evnx validate --format github
+  config    .evnx.toml
+::error file=.env,line=1::Missing required variable: SENTRY_DSN%0ASuggestion: Add SENTRY_DSN=<value> to .env
+::error file=.env,line=5::SECRET_KEY looks like a placeholder%0ASuggestion: Run: openssl rand -hex 32
+::warning file=.env,line=2::DEBUG is set to "False" (string, not boolean)%0ASuggestion: Use false or 0 for proper boolean handling
+::error file=.env,line=5::SECRET_KEY is too weak or predictable%0ASuggestion: Run: openssl rand -hex 32
+Validation failed: 3 errors
+  Docs: https://www.evnx.dev/guides/commands/validate
+
+[exit 1]

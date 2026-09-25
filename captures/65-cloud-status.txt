@@ -1,0 +1,11 @@
+$ evnx cloud status
+evnx cloud
+  server    https://api.evnx.dev
+  account   you@example.com
+  status    signed in
+  token     access token expired — the next command will try to renew it
+  run `evnx auth status` to confirm with the server
+
+  Docs: https://www.evnx.dev/guides/commands/cloud
+
+[exit 0]

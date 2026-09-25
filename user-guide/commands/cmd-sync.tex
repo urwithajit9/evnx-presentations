@@ -1,0 +1,68 @@
+\section{evnx sync}
+
+\begin{frame}{\cmd{evnx sync} — keep \file{.env.example} honest}
+  \textbf{Purpose.} Propagate variable \emph{names} between \file{.env} and
+  \file{.env.example}, never the values.
+
+  \begin{block}{Synopsis}\texttt{evnx sync [OPTIONS]}\end{block}
+
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    \textbf{Flag} & \textbf{What it does} \\
+    \midrule
+    \flag{--direction forward} & \file{.env} $\rightarrow$ \file{.env.example} (default) \\
+    \flag{--direction reverse} & \file{.env.example} $\rightarrow$ \file{.env} (onboarding) \\
+    \flag{--check}             & \textbf{The CI gate.} Implies \flag{--dry-run} \\
+    \flag{-n, --dry-run}       & Preview, write nothing \\
+    \flag{-f, --force}         & Skip confirmation — \textbf{required in CI} \\
+    \flag{--placeholder}       & Placeholder values for new variables \\
+    \flag{--format <FORMAT>}   & \texttt{json} carries a diff summary \\
+    \flag{--naming-policy}     & \texttt{warn} (default) / \texttt{error} / \texttt{ignore} \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}[fragile]{\flag{--check} — the only flag that documents its own exit codes}
+\begin{lstlisting}[style=evnxcode]
+      --check
+          Report whether the files are in step through the exit code.
+
+          Implies --dry-run: nothing is ever written. This is the CI gate.
+
+            0  in sync
+            1  out of sync - commit the result of `evnx sync`
+            2  error - a file is missing, or will not parse
+\end{lstlisting}
+  \capture{35-sync-check.txt}
+\end{frame}
+
+\begin{frame}[fragile]{Fixing the drift}
+  \capture{36-sync-forward.txt}
+
+  \begin{alertblock}{\flag{--force} is required in any non-interactive context}
+    Without it \cmd{sync} prompts, and with no TTY exits \exittwo{} with
+    \texttt{not a terminal}. Piping \texttt{yes} does not help — the prompt needs
+    a real terminal.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{Use cases}
+  \begin{tabular}{@{}p{0.42\textwidth}p{0.52\textwidth}@{}}
+    \toprule
+    \textbf{Situation} & \textbf{Command} \\
+    \midrule
+    CI: has the template drifted? & \texttt{evnx sync --check} \\
+    Commit the fix & \texttt{evnx sync --direction forward --force} \\
+    New teammate fills \file{.env} & \texttt{evnx sync --direction reverse --force} \\
+    Preview without writing & \texttt{evnx sync --dry-run} \\
+    Machine-readable drift & \texttt{evnx sync --check --format json} \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.8em}
+  \begin{block}{Why this matters more than it looks}
+    \file{.env.example} is the only contract a new developer has. A variable
+    added to \file{.env} and not to the template is a broken checkout for the
+    next person — and nothing else in the toolchain notices.
+  \end{block}
+\end{frame}

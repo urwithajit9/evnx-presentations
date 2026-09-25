@@ -1,0 +1,70 @@
+\section{evnx spec}
+
+\begin{frame}{\cmd{evnx spec} — the contract \file{.env.example} cannot express}
+  \textbf{Purpose.} Declare what each variable \emph{is}: required, secret,
+  a URL, a port, production-only.
+
+  \begin{block}{Synopsis}\texttt{evnx spec init}\end{block}
+
+  \file{.env.example} can say a variable exists. It cannot say it is required
+  only in production, must parse as a URL, or holds a credential despite a name
+  that gives nothing away.
+
+  \vspace{0.6em}
+  \begin{block}{Where it lives}
+    \texttt{[vars.*]} tables in \file{.evnx.toml} — a committed, project-level
+    file. Read by \cmd{validate}, \cmd{scan} and \cmd{sync}.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{\cmd{spec init} — infer a first draft}
+  \capture{31-spec-init.txt}
+\end{frame}
+
+\begin{frame}[fragile]{The generated \file{.evnx.toml}}
+  \capturepart{31-spec-toml.txt}{1}{24}
+
+  {\footnotesize The header is honest: \emph{``Every field below is inferred
+  from this project's files — review it, then commit it.''} Output is
+  alphabetically sorted and deterministic.}
+\end{frame}
+
+\begin{frame}[fragile]{Hand-written entries are where the value is}
+\begin{lstlisting}[style=evnxcode]
+[vars.TENANT_A_TOKEN]
+secret = true                    # scan reports it; no heuristic could
+environments = ["production"]    # required only in production
+
+[vars.PORT]
+format = "port"
+description = "HTTP listen port"
+\end{lstlisting}
+
+  \begin{block}{The asymmetry that matters}
+    \texttt{secret = true} \textbf{adds} a finding \cmd{scan} could not otherwise
+    reach. \texttt{secret = false} \textbf{retracts} a guess made from a
+    variable's \emph{name} — but never a match on its \emph{value}. A variable
+    holding \texttt{sk\_live\_\ldots} is reported however it is declared, because
+    \file{.evnx.toml} is committed and one wrong line would otherwise silence a
+    live key for everyone who clones the repository.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Settings that weaken scanning are announced}
+\begin{lstlisting}[style=evnxcode]
+  config    .evnx.toml (scan.severity=high, vars.secret=false on 1 variable(s))
+\end{lstlisting}
+
+  {\footnotesize Because the file is committed, one commit could otherwise
+  narrow scanning for everyone who clones the repository with nothing on the
+  command line to show it.}
+
+  \vspace{0.8em}
+  \textbf{Use cases}
+  \begin{itemize}\footnotesize
+    \item A token whose name reveals nothing: \texttt{secret = true}
+    \item A variable only production needs: \texttt{environments = ["production"]}
+    \item A shared team scan rule: \texttt{[[scan.patterns]]}
+    \item Project-wide severity floor: \texttt{[scan] severity = "high"}
+  \end{itemize}
+\end{frame}

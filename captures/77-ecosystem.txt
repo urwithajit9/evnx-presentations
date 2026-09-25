@@ -1,0 +1,5 @@
+evnx           9cfe75b  (fix: a real provider key is no longer reported as a )
+evnx-server    ec15b24  (chore: publish an image on merge to main, and delete)
+evnx-crypto    f265858  (chore(release): 0.2.1 — reencrypt_vault)
+evnx-web       02069c1  (docs: .env is generated with values, not TODO commen)
+evnx-app       f623e5e  (feat(vaults): show a vault's activity trail)

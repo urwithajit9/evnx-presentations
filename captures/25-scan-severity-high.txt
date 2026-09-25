@@ -1,0 +1,30 @@
+$ evnx scan --severity high --no-color
+  config    .evnx.toml
+
+  evnx scan  Checking for exposed secrets
+
+  scanning ./.evnx.toml, ./.env
+
+  ✗  Declared secret                             high
+     ./.env:5 (SECRET_KEY)  CH…ME
+     ·  declared `secret = true` in .evnx.toml
+
+  ✗  Sensitive config key: SENDGRID_API_KEY      high
+     ./.env:6 (SENDGRID_API_KEY)  SG.a…NoPq
+     ·  flagged by variable name — the value was not checked
+
+  ✗  Stripe Secret Key (LIVE)                    high
+     ./.env:7 (STRIPE_SECRET_KEY)  sk_l…7890
+     !  matches a live key format, not a placeholder
+     →  revoke at https://dashboard.stripe.com/apikeys
+
+  3 findings  ·  3 high
+
+
+Next steps:
+  1. Revoke or rotate the keys above — assume they are compromised
+  2. Remove them from history: git filter-repo --path .env --invert-paths
+  3. Force push, after coordinating with everyone who has a clone
+  Docs: https://www.evnx.dev/guides/commands/scan
+
+[exit 1]

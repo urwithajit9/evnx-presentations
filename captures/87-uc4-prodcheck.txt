@@ -1,0 +1,12 @@
+$ evnx validate --env-name production
+
+  evnx validate  Check environment configuration
+
+  !  DATABASE_URL uses localhost/127.0.0.1
+     ./.env.production
+     →  In Docker, use service name instead (e.g., db:5432)
+
+  1 warning
+  Docs: https://www.evnx.dev/guides/commands/validate
+
+[exit 0]

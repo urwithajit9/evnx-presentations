@@ -1,0 +1,7 @@
+APP_NAME=orders-api
+DEBUG="False"
+DATABASE_URL=postgresql+asyncpg://api:s3cr3t@localhost:5432/orders
+REDIS_URL=redis://:devpass@localhost:6379/0
+SECRET_KEY=CHANGE_ME
+SENDGRID_API_KEY=SG.aBcDeFgHiJkLmNoPqRsTuV.wXyZ1234567890aBcDeFgHiJkLmNoPq
+STRIPE_SECRET_KEY=sk_live_51QwErTyUiOpAsDfGhJkLzXcVbNm1234567890

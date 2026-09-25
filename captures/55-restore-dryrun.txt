@@ -1,0 +1,20 @@
+$ evnx restore prod.backup --password-file key.txt --dry-run
+
+  evnx restore  Decrypt and restore from an encrypted backup
+
+✓ Read backup from prod.backup
+! Reading password from file: key.txt
+  Less secure than interactive prompt — avoid in shared environments.
+
+Backup information:
+  Schema version: v1
+  Original file : .env
+  Created at    : 2026-09-24T18:00:25Z
+  Tool version  : evnx v0.5.0
+  Variables     : 3
+
+✓ Decrypted content appears to be a valid .env file
+
+✓ Dry-run complete — no files were written
+
+[exit 0]

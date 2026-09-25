@@ -1,0 +1,29 @@
+        },
+
+        Commands::Completions { shell } => commands::completions::run(shell),
+    };
+
+    // ⚠️ An error is exit **2**, not 1.
+    //
+    // `scan`, `diff`, `doctor` and `sync --check` already document 2 as "could
+    // not run, so there is no verdict", and 1 as a real finding — *secrets
+    // found*, *differences*, *unhealthy*, *drifted*. Returning the command's
+    // `Result` from `main` gave Rust's default `Termination`, which numbers any
+    // error 1, so `evnx validate --env ./missing.env` reported **validation
+    // failed** for a file it never opened.
+    //
+    // `diff` and `sync` were already wrapped individually and are unaffected;
+    // this catches `validate`, `convert` and `template`, and anything added
+    // later, by default rather than by remembering.
+    //
+    // Commands that exit on their own — `scan`, `doctor`, `backup`, `restore`
+    // and the findings path in `validate` — never reach here.
+    if let Err(e) = outcome {
+        eprintln!("{} {:#}", "Error:".on_red().bold(), e);
+        eprintln!();
+        eprintln!("No verdict: evnx did not finish. This is not a clean result.");
+        std::process::exit(2);
+    }
+
+    Ok(())
+}

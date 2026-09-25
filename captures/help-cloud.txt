@@ -1,0 +1,39 @@
+$ evnx cloud --help
+Sync encrypted .env files with evnx cloud.
+
+Secrets are encrypted on this machine before upload. The server stores ciphertext and cannot read them.
+
+Usage: evnx cloud [OPTIONS] <COMMAND>
+
+Commands:
+  push     Encrypt a .env and upload it as a new version
+  pull     Download a version and decrypt it
+  run      Run a command with a vault's variables in its environment
+  history  List a vault's versions, newest first
+  link     Bind this directory to a vault, so push and pull need no --vault
+  unlink   Remove this directory's vault binding
+  status   Show whether this machine is set up for cloud sync
+  help     Print this message or the help of the given subcommand(s)
+
+Options:
+      --server <URL>
+          evnx server to talk to. Overrides EVNX_SERVER and config.toml.
+          
+          Plain http:// is refused for anything but a loopback address, because the access and refresh tokens travel in request headers.
+
+  -v, --verbose
+          Enable verbose output
+
+  -q, --quiet
+          Suppress non-essential output
+
+      --no-color
+          Disable colored output
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+  -V, --version
+          Print version
+
+Full guide: https://www.evnx.dev/guides/commands/cloud

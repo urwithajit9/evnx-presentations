@@ -1,0 +1,23 @@
+=== direct dependencies (Cargo.toml) ===
+clap clap_complete indexmap dialoguer console colored indicatif serde serde_json serde_yaml toml tempfile regex lazy_static dotenvy chrono glob walkdir dirs anyhow thiserror zeroize reqwest crypto_box evnx-crypto hex toml_edit qrcode aes-gcm rand getrandom 
+
+=== optional (feature-gated) ===
+# reqwest # reqwest # reqwest reqwest crypto_box evnx-crypto hex blake3 toml_edit qrcode aes-gcm argon2 rand 
+
+=== package metadata ===
+name        = "evnx"
+version     = "0.5.0"
+edition     = "2021"
+rust-version = "1.85"
+repository  = "https://github.com/urwithajit9/evnx"
+homepage    = "https://evnx.dev"
+license     = "MIT"
+name = "evnx"
+name = "evnx"
+name = "cli_benchmarks"
+
+=== binary size ===
+8.5M
+
+=== dependency count in lockfile ===
+370

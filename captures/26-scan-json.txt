@@ -1,0 +1,48 @@
+$ evnx scan --format json
+  config    .evnx.toml
+{
+  "files_scanned": 2,
+  "secrets_found": 3,
+  "findings": [
+    {
+      "pattern": "Declared secret",
+      "confidence": "high",
+      "value_preview": "CH…ME",
+      "location": "./.env:5 (SECRET_KEY)",
+      "variable": "SECRET_KEY",
+      "action_url": null,
+      "matched_by": "name"
+    },
+    {
+      "pattern": "Sensitive config key: SENDGRID_API_KEY",
+      "confidence": "high",
+      "value_preview": "SG.a…NoPq",
+      "location": "./.env:6 (SENDGRID_API_KEY)",
+      "variable": "SENDGRID_API_KEY",
+      "action_url": null,
+      "matched_by": "name"
+    },
+    {
+      "pattern": "Stripe Secret Key (LIVE)",
+      "confidence": "high",
+      "value_preview": "sk_l…7890",
+      "location": "./.env:7 (STRIPE_SECRET_KEY)",
+      "variable": "STRIPE_SECRET_KEY",
+      "action_url": "https://dashboard.stripe.com/apikeys",
+      "matched_by": "value"
+    }
+  ],
+  "high_confidence": 3,
+  "medium_confidence": 0,
+  "low_confidence": 0,
+  "summary": {
+    "total": 3,
+    "high": 3,
+    "medium": 0,
+    "low": 0,
+    "files_scanned": 2
+  }
+}
+  Docs: https://www.evnx.dev/guides/commands/scan
+
+[exit 1]

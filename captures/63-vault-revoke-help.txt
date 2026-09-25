@@ -1,0 +1,47 @@
+$ evnx vault revoke --help
+Revoke a member's access, rotating the vault key.
+
+⚠️ This re-encrypts every version of the vault under a fresh key and re-wraps it for everyone who stays. It is not a quick operation and it is not reversible.
+
+What it achieves: the removed member can no longer read anything pushed from now on. What it cannot: recall copies of what they could already read. Rotate those secrets at their source.
+
+Usage: evnx vault revoke [OPTIONS] --user <USER> <TARGET>
+
+Arguments:
+  <TARGET>
+          Vault: `name`, `name/environment`, or an id
+
+Options:
+      --user <USER>
+          Email address of the member to remove
+
+  -y, --yes
+          Skip the confirmation prompt
+
+      --no-rekey
+          Remove the member WITHOUT rotating the vault key.
+          
+          ⚠️ They keep the ability to decrypt every version they already had access to, including ones pushed after this. Only use it when you are re-keying separately, or when the member never held the key.
+
+      --password-stdin
+          Read the master password from stdin instead of prompting
+
+      --server <URL>
+          evnx server to talk to. Overrides EVNX_SERVER and config.toml
+
+  -v, --verbose
+          Enable verbose output
+
+  -q, --quiet
+          Suppress non-essential output
+
+      --no-color
+          Disable colored output
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+  -V, --version
+          Print version
+
+[exit 0]

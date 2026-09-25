@@ -1,0 +1,2 @@
+$ diff .env restored.env
+(no differences — byte identical)

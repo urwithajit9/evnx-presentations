@@ -1,0 +1,33 @@
+$ evnx migrate --to aws-secrets-manager --secret-name prod/orders/config --dry-run
+  config    .evnx.toml
+
+  evnx migrate  Generate destination commands from your .env
+
+
+✓ Loaded 8 secrets from env-file
+
+· AWS Secrets Manager migration
+
+Dry-run — would upload to AWS Secrets Manager:
+  Secret name : prod/orders/config
+  Secrets     : 8
+
+  JSON preview (first 300 chars):
+  {
+  "APP_NAME": "orders-api",
+  "DEBUG": "false",
+  "DATABASE_URL": "postgresql+asyncpg://api:s3cr3t@localhost:5432/orders",
+  "REDIS_URL": "redis://:devpass@localhost:6379/0",
+  "SECRET_KEY": "42080e95041b83f5085602c0ebd21a2cfb7e4daa077763bbd5e22a3bd54d7331",
+  "SENDGRID_API_KEY": "SG.aBcDeFgHiJkLm
+  … (152 more chars)
+
+Summary:
+  ·  8 secret(s) previewed
+     dry run — nothing was uploaded and nothing was written
+
+Next step:
+  Re-run without --dry-run to apply this.
+  Docs: https://www.evnx.dev/guides/commands/migrate
+
+[exit 0]

@@ -1,0 +1,63 @@
+\section{evnx diff}
+
+\begin{frame}{\cmd{evnx diff} — two commands sharing one name}
+  \textbf{Purpose.} Show what differs between two environment files.
+
+  \begin{block}{Synopsis}\texttt{evnx diff [OPTIONS]}\end{block}
+
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    \textbf{Flag} & \textbf{What it does} \\
+    \midrule
+    \flag{--env-name <NAME>}   & Left side: \file{.env.<NAME>} \\
+    \flag{--against <NAME>}    & \textbf{Right side}: \file{.env.<NAME>} not the template \\
+    \flag{--env} / \flag{--example} & Explicit paths \\
+    \flag{--show-values}       & Reveal values (masked by default) \\
+    \flag{--ignore-keys <K,K>} & Skip keys that are meant to differ \\
+    \flag{--format <FORMAT>}   & \texttt{pretty}, \texttt{json}, patch \\
+    \flag{--with-stats}        & Extended statistics in JSON \\
+    \flag{--reverse}           & Swap direction \\
+    \flag{-i, --interactive}   & Interactive merge (patch format) \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}[fragile]{Default: against the template}
+  \capture{29-diff.txt}
+
+  \begin{alertblock}{This form is not a CI gate}
+    \file{.env.example} holds empty placeholders by construction, so every
+    filled-in variable counts as a difference. A perfectly healthy project
+    exits \exitone.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}[fragile]{\flag{--against}: between two real environments}
+  \capture{58-diff-against.txt}
+
+  {\footnotesize \textbf{This form \emph{is} a gate} — it exits \exitzero{} when
+  the two environments match.}
+\end{frame}
+
+\begin{frame}{Which form to use}
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+    \textbf{Invocation} & \textbf{Gateable} & \textbf{Why} \\
+    \midrule
+    \texttt{evnx diff} & \textcolor{evnxErr}{No} & Template values differ by construction \\
+    \texttt{evnx diff --against Y} & \textcolor{evnxOk}{Yes} & Two real files; \exitzero{} when equal \\
+    \texttt{evnx sync --check} & \textcolor{evnxOk}{Yes} & Purpose-built, documents 0/1/2 \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{1em}
+  \textbf{Use cases}
+  \begin{itemize}\footnotesize
+    \item ``What is staging missing that production has?''\\
+          \texttt{evnx diff --env-name production --against staging}
+    \item ``Ignore the keys that are supposed to differ''\\
+          \texttt{... --ignore-keys APP\_ENV,RUST\_LOG,SENTRY\_ENVIRONMENT}
+    \item ``Give me something to diff in CI''\\
+          \texttt{... --format json --with-stats}
+  \end{itemize}
+\end{frame}

@@ -1,0 +1,65 @@
+$ evnx cloud run --help
+Run a command with a vault's variables in its environment.
+
+The secrets are decrypted in memory and handed to the child process. Nothing is written to disk, nothing enters your shell history, and nothing appears in `ps` — values travel in the environment block, never in the argument vector.
+
+⚠️ This removes the plaintext *file*, not the master password. The vault key is wrapped under your master key, so decryption needs it wherever this runs; in CI, feed it with --password-stdin.
+
+The command runs directly, not through a shell. For a pipeline or a shell builtin, ask for one: `-- sh -c 'a | b'`.
+
+`--version` here means the vault version, so clap's auto-generated `--version` is disabled on this subcommand, as it is on `pull`. Use `evnx --version` for the program version.
+
+Usage: evnx cloud run [OPTIONS] -- <COMMAND>...
+
+Arguments:
+  <COMMAND>...
+          The command to run, after `--`.
+          
+          `last = true` makes the separator mandatory, so a flag meant for the child — `-- npm run build --prod` — cannot be mistaken for one of evnx's own.
+
+Options:
+      --vault <VAULT>
+          Vault to read: `name`, `name/environment`, or an id.
+          
+          Optional in a directory bound with `evnx cloud link`.
+
+      --version <N>
+          Version to inject. Defaults to the latest
+
+      --include <GLOB>
+          Inject only variables whose name matches one of these globs.
+          
+          Example: --include "DB_*,AWS_*"
+          
+          Least privilege for a subprocess: a build step that needs only `NEXT_PUBLIC_*` has no reason to be handed your database password.
+
+      --exclude <GLOB>
+          Skip variables whose name matches one of these globs.
+          
+          Example: --exclude "*_LOCAL,*_TEST"
+          
+          Applied after --include, so a name matching both is skipped.
+
+      --password-stdin
+          Read the master password from stdin instead of prompting.
+          
+          Only the first line is consumed; the child inherits the rest of stdin.
+
+      --server <URL>
+          evnx server to talk to. Overrides EVNX_SERVER and config.toml.
+          
+          Plain http:// is refused for anything but a loopback address, because the access and refresh tokens travel in request headers.
+
+  -v, --verbose
+          Enable verbose output
+
+  -q, --quiet
+          Suppress non-essential output
+
+      --no-color
+          Disable colored output
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+[exit 0]

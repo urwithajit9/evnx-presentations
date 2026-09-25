@@ -1,0 +1,21 @@
+$ evnx backup --key-file k.txt --output prod.backup --verify
+
+  evnx backup  Encrypt and back up your .env file
+
+✓ Read 8 bytes from .env
+· Using key file for encryption (non-interactive mode)
+
+✓ Backup created and verified successfully
+  Source  : .env
+  Backup  : prod.backup
+  Size    : 264 bytes (encrypted + Base64)
+  Verified: yes
+
+! Important:
+  • Keep your password (or key file) safe — it cannot be recovered
+  • Store the backup in a secure, separate location
+  • To restore: evnx restore prod.backup --output .env
+  • Test the restore before deleting the original .env
+  Docs: https://www.evnx.dev/guides/commands/backup
+
+[exit 0]

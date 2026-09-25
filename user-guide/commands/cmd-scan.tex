@@ -1,0 +1,119 @@
+\section{evnx scan}
+
+\begin{frame}{\cmd{evnx scan} — find secrets that look real}
+  \textbf{Purpose.} Detect credentials that appear to be live, in every
+  \file{.env} variant in a tree, and say where to revoke them.
+
+  \begin{block}{Synopsis}\texttt{evnx scan [OPTIONS] [PATH]...}\end{block}
+
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    \textbf{Flag} & \textbf{What it does} \\
+    \midrule
+    \texttt{[PATH]...}            & \textbf{Positional}, default \texttt{.}; already recursive \\
+    \flag{--severity <LEVEL>}     & \texttt{high} / \texttt{medium} / \texttt{low} (default) \\
+    \flag{--pattern <REGEX>}      & Your own key shapes; repeatable \\
+    \flag{--exclude <GLOB>}       & Default \file{.env.example} \\
+    \flag{--ignore-placeholders}  & Skip values that look like placeholders \\
+    \flag{--format <FORMAT>}      & \texttt{pretty}, \texttt{json}, \texttt{sarif}, \texttt{github} \\
+    \flag{--exit-zero}            & Suppress \exitone{} only, never \exittwo \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.4em}
+  {\footnotesize \exitzero{} clean \quad \exitone{} secrets found \quad
+  \exittwo{} the scan could not be completed}
+
+  \vspace{0.3em}
+  \begin{alertblock}{There is no \flag{--path}}
+    Paths are positional. \texttt{evnx scan --path .} exits \exittwo.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}[fragile]{A real run}
+  \capture{24-scan.txt}
+\end{frame}
+
+\begin{frame}{Two kinds of finding — and the difference matters}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \textbf{Matched by \emph{value}}\\[0.3em]
+      {\footnotesize The value matches a known provider format. This is the
+      line that means \emph{drop everything and rotate}.}
+      \vspace{0.4em}
+      {\scriptsize\ttfamily
+      ! matches a live key format,\\ \phantom{! }not a placeholder\\
+      $\rightarrow$ revoke at dashboard.stripe.com}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \textbf{Matched by \emph{name}}\\[0.3em]
+      {\footnotesize The variable is named like a secret. The value was never
+      read, so this is a prompt to look, not to rotate.}
+      \vspace{0.4em}
+      {\scriptsize\ttfamily
+      \textperiodcentered\ flagged by variable name\\ \phantom{. }-- the value was not checked}
+    \end{column}
+  \end{columns}
+
+  \vspace{1em}
+  {\footnotesize In \flag{--format json} this is the \texttt{matched\_by} field
+  (\texttt{"name"} or \texttt{"value"}). Attaching ``rotate this now'' to a name
+  match is how people learn to ignore a scanner.}
+\end{frame}
+
+\begin{frame}[fragile]{\flag{--severity high} — the blocking gate}
+  \capture{25-scan-severity-high.txt}
+
+  {\footnotesize \flag{--severity} filters what is reported, counted
+  \emph{and} exited on — all three describe the same set. The default
+  (\texttt{low}) will block on every high-entropy string, including public keys
+  that are meant to be public.}
+\end{frame}
+
+\begin{frame}[fragile]{\flag{--format github} — inline PR annotations}
+  \capture{27-scan-github.txt}
+\end{frame}
+
+\begin{frame}[fragile]{\flag{--format sarif} — the Security tab}
+  \capturepart{28-scan-sarif.txt}{1}{20}
+\end{frame}
+
+\begin{frame}{What the SARIF carries}
+  \begin{itemize}
+    \item \textbf{Stable \texttt{ruleId}s} — \texttt{secret/sensitive-config-key},
+          not one rule per variable name, so the Security tab does not grow a
+          rule per secret.
+    \item \textbf{\texttt{rules[]} with \texttt{helpUri}} pointing at
+          \texttt{evnx.dev/guides/commands/scan} — the fix is one click from
+          the alert.
+    \item \textbf{\texttt{partialFingerprints}} keyed on
+          \texttt{file::variable::rule}, \emph{not} line number — so inserting a
+          line above a secret does not close and reopen a triaged alert.
+  \end{itemize}
+
+  \vspace{0.6em}
+  \begin{block}{Values are always masked}
+    Every format prints first-4/last-4 only. A secret scanner that prints
+    secrets into your CI log has not helped you.
+  \end{block}
+\end{frame}
+
+\begin{frame}{Use cases}
+  \begin{tabular}{@{}p{0.40\textwidth}p{0.54\textwidth}@{}}
+    \toprule
+    \textbf{Situation} & \textbf{Command} \\
+    \midrule
+    Pre-commit hook & \texttt{evnx scan --severity high} \\
+    Block a pull request & \texttt{evnx scan --severity high --format github} \\
+    Upload to Security tab & \texttt{evnx scan --format sarif --exit-zero > x.sarif} \\
+    Your own token shape & \texttt{evnx scan --pattern 'ACME-[A-Z0-9]\{32\}'} \\
+    One directory only & \texttt{evnx scan ./services/api} \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.8em}
+  \begin{alertblock}{A regex that does not compile exits \exittwo}
+    And \flag{--exit-zero} does \emph{not} suppress it. A broken rule reading as
+    ``no secrets found'' would be CI passing a search that never ran.
+  \end{alertblock}
+\end{frame}

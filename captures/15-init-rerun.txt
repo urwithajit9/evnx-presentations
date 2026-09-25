@@ -1,0 +1,18 @@
+$ evnx init --detect   # second run, project already initialised
+
+  evnx init  Set up environment variables for your project
+
+
+  Detected
+  ✓  Next.js                next                    package.json
+
+  4 variables from 1 components
+
+Error: ./.env.example already exists.
+
+Refusing to overwrite it without being asked to — it is a tracked file and the contents may be hand-maintained.
+Re-run with --force to replace it, or remove it first.
+
+No verdict: evnx did not finish. This is not a clean result.
+
+[exit 2]

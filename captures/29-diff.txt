@@ -1,0 +1,27 @@
+$ evnx diff --no-color
+  config    .evnx.toml
+
+  evnx diff  .env ↔ .env.example
+
+Missing from .env (present in .env.example):
+  + SENTRY_DSN
+
+Different values:
+  ~ APP_NAME
+  ~ DEBUG
+  ~ DATABASE_URL
+  ~ REDIS_URL
+  ~ SECRET_KEY
+    .env.example: ***
+    .env: CH***
+  ~ SENDGRID_API_KEY
+    .env.example: ***
+    .env: SG***
+  ~ STRIPE_SECRET_KEY
+    .env.example: ***
+    .env: sk***
+
+  1 missing from .env  ·  7 different values
+  Docs: https://www.evnx.dev/guides/commands/diff
+
+[exit 1]

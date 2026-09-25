@@ -1,0 +1,7 @@
+$ evnx cloud history --server http://127.0.0.1:59999
+Error: no vault given and this directory has no binding.
+  Pass --vault <name>, or bind the directory once with `evnx cloud link <name>`.
+
+No verdict: evnx did not finish. This is not a clean result.
+
+[exit 2]

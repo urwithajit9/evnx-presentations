@@ -1,0 +1,12 @@
+$ evnx template --input app.yaml.tpl --output app.yaml --no-gitignore
+
+  Generate config from template
+
+✓ Loaded 4 variables from .env
+✓ Read template from app.yaml.tpl
+! Variable 'OTEL_ENDPOINT' referenced in template but not defined in .env
+✓ Generated config at app.yaml
+· 1 placeholder was left unresolved and written through literally. Use --strict to make this an error.
+  Docs: https://www.evnx.dev/guides/commands/template
+
+[exit 0]

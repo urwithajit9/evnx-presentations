@@ -1,0 +1,15 @@
+$ evnx migrate --dry-run
+  config    .evnx.toml
+
+  evnx migrate  Generate destination commands from your .env
+
+Error: --to is required when there is no terminal to ask.
+
+  Pass one explicitly:
+    evnx migrate --to <DESTINATION>
+
+  Available: github-actions, aws-secrets-manager, doppler, infisical, gcp-secret-manager, azure-keyvault, vercel, heroku, railway
+
+No verdict: evnx did not finish. This is not a clean result.
+
+[exit 2]

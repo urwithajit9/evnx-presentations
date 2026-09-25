@@ -1,0 +1,15 @@
+$ evnx template --input app.yaml.tpl --output app2.yaml --no-gitignore --strict
+
+  Generate config from template
+
+✓ Loaded 4 variables from .env
+✓ Read template from app.yaml.tpl
+! Variable 'OTEL_ENDPOINT' referenced in template but not defined in .env
+Error: 1 variable referenced in app.yaml.tpl has no value in .env: OTEL_ENDPOINT
+
+Define it there, or give it a fallback with {{NAME|default:value}}.
+Nothing was written to app2.yaml.
+
+No verdict: evnx did not finish. This is not a clean result.
+
+[exit 2]

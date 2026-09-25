@@ -1,0 +1,30 @@
+Manage .env files — validation, secret scanning, and format conversion
+
+Usage: evnx [OPTIONS] <COMMAND>
+
+Commands:
+  init         Interactive project setup — generates .env.example
+  add          Add environment variables to existing .env files
+  validate     Check .env against .env.example, find issues
+  scan         Detect secrets that look real (AWS keys, tokens, etc.)
+  diff         Compare .env vs .env.example — show missing/extra vars
+  convert      Transform `.env` files into multiple output formats
+  migrate      Full migration workflow to secret managers
+  sync         Keep .env and .env.example in sync
+  template     Generate config files from templates
+  backup       Create encrypted backup of .env
+  restore      Restore from encrypted backup
+  auth         Manage your evnx cloud account
+  vault        Manage encrypted vaults
+  cloud        Sync encrypted .env files with evnx cloud
+  doctor       Check .env files, Git config, project structure, and security
+  spec         Declare what each variable is: required, format, secret
+  completions  Generate shell completions
+  help         Print this message or the help of the given subcommand(s)
+
+Options:
+  -v, --verbose   Enable verbose output
+  -q, --quiet     Suppress non-essential output
+      --no-color  Disable colored output
+  -h, --help      Print help
+  -V, --version   Print version

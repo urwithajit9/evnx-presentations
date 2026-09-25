@@ -1,0 +1,7 @@
+server:
+  host: {{HOST}}
+  port: {{PORT}}
+database:
+  url:  {{DATABASE_URL}}
+  pool: {{DB_POOL_SIZE|default:10}}
+tracing: {{OTEL_ENDPOINT}}

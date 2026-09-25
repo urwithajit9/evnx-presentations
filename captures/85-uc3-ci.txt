@@ -1,0 +1,15 @@
+# simulating a GitHub Actions runner
+$ export GITHUB_ACTIONS=true CI=true
+
+$ evnx scan --severity high --format github
+::error file=./.env,line=3,title=Secret detected (high)::STRIPE_SECRET_KEY matches Stripe Secret Key (test). Rotate it at https://dashboard.stripe.com/apikeys
+::error file=./.env,line=5,title=Secret detected (high)::STRIPE_SECRET_KEY matches Stripe Secret Key (LIVE). Rotate it at https://dashboard.stripe.com/apikeys
+[exit 1]   <- blocks the pull request
+
+$ evnx scan --format sarif --exit-zero > evnx.sarif
+[exit 0]   <- must NOT fail, or upload-sarif is skipped
+$ jq ".runs[0].results | length" evnx.sarif
+3
+
+$ evnx sync --check
+[exit 1]   <- template drifted

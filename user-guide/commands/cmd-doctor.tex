@@ -1,0 +1,63 @@
+\section{evnx doctor}
+
+\begin{frame}{\cmd{evnx doctor} — is this project set up correctly?}
+  \textbf{Purpose.} Check the things around \file{.env}: gitignore coverage,
+  file permissions, syntax, project structure.
+
+  \begin{block}{Synopsis}\texttt{evnx doctor [OPTIONS]}\end{block}
+
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    \flag{--fix}             & Repair gitignore coverage and permissions \\
+    \flag{--strict}          & Treat warnings as failures \\
+    \flag{--path <PATH>}     & Diagnose another directory \\
+    \flag{--format <FORMAT>} & \texttt{json} for CI \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.5em}
+  {\footnotesize \texttt{EVNX\_OUTPUT\_JSON=1} is also honoured, and is what the
+  older guides document.}
+\end{frame}
+
+\begin{frame}[fragile]{A real run}
+  \capture{30-doctor.txt}
+\end{frame}
+
+\begin{frame}{What it checks, and why each matters}
+  \begin{tabular}{@{}p{0.36\textwidth}p{0.58\textwidth}@{}}
+    \toprule
+    \textbf{Check} & \textbf{Why} \\
+    \midrule
+    \file{.env} in \file{.gitignore} & The single highest-value check here \\
+    File permissions & \texttt{0600}; \texttt{0644} exposes secrets to other users \\
+    \file{.env} syntax & Reports \emph{every} bad line, not just the first \\
+    \file{.env.example} exists \& tracked & The contract new developers rely on \\
+    Project type detection & Confirms evnx understands your stack \\
+    Docker configuration & Detects \file{docker-compose.yml} / \file{Dockerfile} \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.8em}
+  {\footnotesize \textbf{v0.5.0:} \cmd{doctor} and the core parser now agree.
+  \texttt{export FOO=bar} is valid (it is standard dotenv), a leading underscore
+  is valid, and all syntax errors are reported in one run.}
+\end{frame}
+
+\begin{frame}{Use cases}
+  \begin{itemize}
+    \item \textbf{First thing in a cloned repo} — \texttt{evnx doctor}
+    \item \textbf{Fix the mechanical problems} — \texttt{evnx doctor --fix}
+    \item \textbf{A monorepo service} — \texttt{evnx doctor --path services/api}
+    \item \textbf{CI health check} — \texttt{evnx doctor --format json | jq '.summary.errors'}
+    \item \textbf{Strict gate} — \texttt{evnx doctor --strict}
+  \end{itemize}
+
+  \vspace{1em}
+  \begin{block}{\cmd{doctor} vs \cmd{validate}}
+    \cmd{doctor} asks \emph{``is this project set up correctly?''} —
+    gitignore, permissions, structure.\\
+    \cmd{validate} asks \emph{``are the values in this file fit to run?''} —
+    missing, placeholder, weak, malformed.
+  \end{block}
+\end{frame}

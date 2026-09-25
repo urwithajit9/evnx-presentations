@@ -1,0 +1,22 @@
+$ /home/ajit/Pictures/ajit/evnx-cloud/evnx/target/release/evnx init --detect
+
+  evnx init  Set up environment variables for your project
+
+
+  Detected
+  ✓  Next.js                next                    package.json
+
+  4 variables from 1 components
+
+✓ Created .env from template
+✓ Created .gitignore with .env*, !.env.example, !.env.sample, !.env.template
+✓ Created .env.example with 4 variables
+
+Next steps:
+  1. Edit .env and replace placeholder values
+  2. Never commit .env to version control
+  3. Run 'evnx validate' to check configuration
+  4. Use 'evnx add' to add more variables later
+  Docs: https://www.evnx.dev/guides/commands/init
+
+[exit 0]

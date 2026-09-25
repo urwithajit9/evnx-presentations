@@ -1,0 +1,107 @@
+\section{evnx validate}
+
+\begin{frame}{\cmd{evnx validate} — is this \file{.env} fit to run?}
+  \textbf{Purpose.} Compare \file{.env} against \file{.env.example} and, when
+  present, the \texttt{[vars.*]} contract in \file{.evnx.toml}.
+
+  \begin{block}{Synopsis}\texttt{evnx validate [OPTIONS]}\end{block}
+
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    \textbf{Flag} & \textbf{What it does} \\
+    \midrule
+    \flag{--env <PATH>}        & Validate this file instead of \file{.env} \\
+    \flag{--env-name <NAME>}   & \texttt{production} $\rightarrow$ \file{.env.production} \\
+    \flag{--example <PATH>}    & Compare against this template \\
+    \flag{--strict}            & Also report variables absent from the template \\
+    \flag{--fix}               & Repair what can be repaired safely \\
+    \flag{--format <FORMAT>}   & \texttt{pretty} (default), \texttt{json}, \texttt{github} \\
+    \flag{--exit-zero}         & Always exit \exitzero{} (advisory mode) \\
+    \flag{--ignore <TYPES>}    & Comma-separated issue types to suppress \\
+    \flag{--validate-formats}  & Also check value shapes: url, port, email \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.4em}
+  {\footnotesize \exitzero{} valid \quad \exitone{} issues found \quad
+  \exittwo{} could not run}
+\end{frame}
+
+\begin{frame}{What it actually checks}
+  \begin{enumerate}
+    \item \textbf{Missing} — declared in the template, absent from \file{.env}
+    \item \textbf{Placeholders} — \texttt{CHANGE\_ME}, \texttt{YOUR\_KEY\_HERE},
+          \texttt{your\_*\_value}, \texttt{TODO}, \texttt{xxx}, \texttt{example}
+    \item \textbf{Weak credentials} — short or predictable values in
+          \texttt{*\_SECRET}, \texttt{*\_KEY}, \texttt{*\_PASSWORD}, \texttt{*\_TOKEN}
+    \item \textbf{Boolean traps} — \texttt{DEBUG="False"} is a non-empty string
+    \item \textbf{Duplicates} — the same key assigned twice
+    \item \textbf{Formats} (opt-in) — url, port, email
+    \item \textbf{\texttt{localhost} under Docker} — only when a
+          \file{docker-compose.yml} or \file{Dockerfile} is present
+  \end{enumerate}
+
+  \vspace{0.6em}
+  \begin{alertblock}{The boolean trap, in one line of Python}
+    \texttt{>>> bool(os.getenv("DEBUG"))  \# DEBUG="False"} \\
+    \texttt{True}\quad\textemdash\ you just shipped debug mode to production.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}[fragile]{A real run}
+  \capture{21-validate.txt}
+\end{frame}
+
+\begin{frame}[fragile]{\flag{--fix}: what it will and will not invent}
+  \capture{33-validate-fix.txt}
+
+  {\footnotesize It generates secrets from the OS CSPRNG, and normalises booleans.
+  It will \emph{not} invent a database name — a placeholder insertion is reported
+  as a placeholder, not as a repair.}
+\end{frame}
+
+\begin{frame}[fragile]{Machine output: \flag{--format json}}
+  \capturepart{22-validate-json.txt}{1}{22}
+
+  {\footnotesize Machine output goes to \textbf{stdout}; the human trailer goes to
+  \textbf{stderr}. \texttt{evnx validate --format json 2>/dev/null | jq} is safe.}
+\end{frame}
+
+\begin{frame}[fragile]{Machine output: \flag{--format github}}
+  \capture{23-validate-github.txt}
+
+  {\footnotesize One annotation per finding, on the line the issue is on, with
+  the suggestion after a \texttt{\%0A} escape. \texttt{line=1} appears only for
+  a variable that is missing and therefore has no line.}
+\end{frame}
+
+\begin{frame}[fragile]{Context-aware: \texttt{localhost} under Docker}
+  \capturepart{43-validate-localhost-docker.txt}{1}{18}
+
+  {\footnotesize This check fires \emph{only} when Docker configuration is
+  present in the project. \texttt{localhost} is correct on a laptop and wrong
+  inside a container, so the same value is a finding in one project and not in
+  another.}
+\end{frame}
+
+\begin{frame}{Use cases}
+  \begin{tabular}{@{}p{0.42\textwidth}p{0.52\textwidth}@{}}
+    \toprule
+    \textbf{Situation} & \textbf{Command} \\
+    \midrule
+    Pre-flight before \texttt{npm run dev} & \texttt{evnx validate} \\
+    Repair the easy problems & \texttt{evnx validate --fix} \\
+    Check production config & \texttt{evnx validate --env-name production} \\
+    CI gate with annotations & \texttt{evnx validate --format github} \\
+    Advisory only, never fail & \texttt{evnx validate --exit-zero} \\
+    Suppress a known issue type & \texttt{evnx validate --ignore invalid\_url} \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.8em}
+  \begin{block}{Gate on non-zero, never on \texttt{== 1}}
+    \exitone{} means ``I have a verdict and it is bad''. \exittwo{} means
+    ``I have \emph{no} verdict''. A pipeline testing \texttt{\$? -eq 1} treats a
+    crash as a pass.
+  \end{block}
+\end{frame}

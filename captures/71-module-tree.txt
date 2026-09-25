@@ -1,0 +1,34 @@
+=== command module tree ===
+add
+backup
+convert.rs
+diff.rs
+doctor
+init
+migrate
+mod.rs
+restore
+scan
+spec
+sync
+template.rs
+validate
+
+=== cloud module ===
+auth.rs binding.rs client.rs config.rs creds.rs mod.rs run.rs session.rs status.rs sync.rs token.rs totp.rs vault.rs 
+
+=== core module ===
+config.rs converter.rs env_name.rs gitignore.rs glob.rs mod.rs parser.rs spec.rs 
+
+=== features ===
+default = []
+migrate = ["dep:reqwest", "dep:crypto_box"]
+backup  = ["dep:aes-gcm", "dep:argon2",  "dep:rand"]
+cloud   = ["dep:evnx-crypto", "dep:reqwest", "dep:hex", "dep:blake3", "dep:toml_edit", "dep:qrcode"]
+full    = ["migrate", "backup"]
+
+=== test files ===
+add_integration.rs config_integration.rs devrel_review.rs doctor_integration.rs env_name_integration.rs golden golden_output.rs init_integration.rs migrate_integration.rs scan_integration.rs schema_integration.rs schema_unit.rs spec_integration.rs sync_integration.rs template_integration.rs tests.rs 
+
+=== golden fixtures ===
+convert.json convert.yaml diff.json doctor.json scan.github scan.json scan.sarif sync-check.json validate-strict.json validate.json 

@@ -1,0 +1,54 @@
+$ evnx restore --help
+Restore from encrypted backup
+
+Usage: evnx restore [OPTIONS] <BACKUP>
+
+Arguments:
+  <BACKUP>
+          
+
+Options:
+      --output <OUTPUT>
+          [default: .env]
+
+      --dry-run
+          Decrypt and validate but do not write any files
+
+      --inspect
+          List variable names (never values) without writing any files.
+          
+          Decrypts the backup and prints each key name to stdout. Values are never displayed. No files are written and no overwrite prompt is shown. Use this to answer "what keys are in this backup?" before committing to a full restore.
+          
+          Example: evnx restore .env.backup --inspect
+
+      --password-file <PATH>
+          Read the decryption password from a file instead of prompting.
+          
+          The file should contain only the password, with an optional trailing newline (stripped automatically). Intended for CI/CD pipelines where interactive prompts are not possible.
+          
+          Security: less secure than the interactive prompt. The file path may appear in process listings and shell history. Use a secrets manager or a tmpfs-backed path (e.g. /run/secrets/) in production.
+          
+          EVNX_PASSWORD environment variable is also accepted and takes lower priority than --password-file.
+          
+          Also accepted as --key-file, which is what `evnx backup` calls the same thing. Either spelling reads the file identically on both sides, so one file round-trips.
+          
+          Examples: evnx restore .env.backup --password-file /run/secrets/evnx-pass EVNX_PASSWORD=mypass evnx restore .env.backup
+          
+          [aliases: --key-file]
+
+  -v, --verbose
+          Enable verbose output
+
+  -q, --quiet
+          Suppress non-essential output
+
+      --no-color
+          Disable colored output
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+  -V, --version
+          Print version
+
+Full guide: https://www.evnx.dev/guides/commands/restore

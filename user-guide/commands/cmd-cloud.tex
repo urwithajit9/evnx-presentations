@@ -1,0 +1,73 @@
+\section{evnx cloud}
+
+\begin{frame}{\cmd{evnx cloud} — encrypted sync}
+  \begin{block}{Synopsis}\texttt{evnx cloud <SUBCOMMAND>}\end{block}
+
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    \texttt{cloud push}   & Encrypt locally, upload ciphertext \\
+    \texttt{cloud pull}   & Download and decrypt \\
+    \texttt{cloud run -- <CMD>} & Inject into a subprocess; nothing on disk \\
+    \texttt{cloud status} & Server, account, token state \\
+    \texttt{cloud history}& Version list \\
+    \texttt{cloud link <VAULT>} & Bind this directory to a vault \\
+    \texttt{cloud unlink} & Remove the binding \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+
+\begin{frame}[fragile]{The zero-knowledge chain}
+\begin{semiverbatim}\scriptsize
+Password
+  -> Argon2id(password, salt, m=64MB, t=3, p=4)
+       -> MasterKey            (never leaves your device)
+           -> XChaCha20(MK) wraps VaultKey   (random 256-bit, one per vault)
+               -> AES-256-GCM(VK, nonce) encrypts .env
+                   -> ciphertext -> object storage
+\end{semiverbatim}
+
+  \vspace{0.5em}
+  \begin{block}{Associated data stops a rollback}
+    Blobs are encrypted with \texttt{vault\_aad(vault\_id, version)} bound in, so
+    a malicious server cannot replay an old version as current.
+
+    \vspace{0.3em}
+    {\footnotesize Consequence: a \texttt{409} conflict requires
+    \textbf{re-encryption}, not a bare retry — the version number is
+    authenticated into the ciphertext.}
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{\cmd{cloud run} — secrets without a file}
+  \capturepart{61-cloud-run-help.txt}{1}{12}
+\end{frame}
+
+\begin{frame}{Why \cmd{cloud run} is different}
+  \begin{itemize}
+    \item Values travel in the \textbf{environment block}, never the argument
+          vector — so nothing in \texttt{ps}, nothing in shell history,
+          nothing on disk.
+    \item \flag{--include} / \flag{--exclude} narrow what the child sees.
+          A build step needing only \texttt{NEXT\_PUBLIC\_*} has no reason to
+          hold your database password.
+    \item A filter matching nothing is an \textbf{error}, not a silent run with
+          zero secrets.
+    \item The child's exit code comes back unchanged.
+    \item It runs the command directly, not through a shell. For a pipeline,
+          ask for one: \texttt{-- sh -c 'a | b'}.
+  \end{itemize}
+
+  \vspace{0.6em}
+  \begin{alertblock}{Be precise about what it removes}
+    It removes the plaintext \emph{file}, not the master password. The vault key
+    is wrapped under your master key, so decryption needs it wherever this runs.
+    In CI, feed it with \flag{--password-stdin}.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}[fragile]{\cmd{cloud status}}
+  \capture{65-cloud-status.txt}
+
+  {\footnotesize A directory bound with \cmd{cloud link} needs no
+  \flag{--vault} on any subsequent command.}
+\end{frame}

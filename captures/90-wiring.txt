@@ -1,0 +1,16 @@
+=== how a command is wired: cli.rs -> commands/ ===
+161:        Commands::Scan {
+--- the Commands enum variant ---
+935:    /// Detect secrets that look real (AWS keys, tokens, etc.).
+936-    #[command(after_help = docs::SCAN.after_help)]
+937-    Scan {
+938-        #[arg(default_value = ".")]
+939-        path: Vec<String>,
+940-        #[arg(long, default_value = ".env.example")]
+941-        exclude: Vec<String>,
+942-
+943-        /// Also report values matching this regular expression. Repeatable.
+944-        ///
+945-        /// For the formats evnx does not ship with — an internal token, a
+946-        /// vendor key shape. `--pattern 'ACME-[A-Z0-9]{32}'` reports matches as
+947-        /// `Custom pattern 1`, numbered in the order the flags are given.

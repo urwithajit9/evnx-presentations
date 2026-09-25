@@ -1,0 +1,64 @@
+\section{evnx template}
+
+\begin{frame}{\cmd{evnx template} — generate a config file from \file{.env}}
+  \begin{block}{Synopsis}
+    \texttt{evnx template --input <FILE> --output <FILE> [OPTIONS]}
+  \end{block}
+
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    \flag{--input <FILE>}   & The template (required) \\
+    \flag{--output <FILE>}  & Where to write (required) \\
+    \flag{--strict}         & Refuse to write with an unresolved placeholder \\
+    \flag{--gitignore}      & Add the output to \file{.gitignore}, no prompt \\
+    \flag{--no-gitignore}   & Skip gitignore handling entirely \\
+    \flag{--env-name <N>}   & Take values from \file{.env.<N>} \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.6em}
+  \textbf{Placeholder syntax}\quad
+  \texttt{\{\{NAME\}\}} \quad and \quad \texttt{\{\{NAME|default:value\}\}}
+\end{frame}
+
+\begin{frame}[fragile]{The template}
+  \capture{50-template-input.txt}
+  \vspace{-0.4em}
+  \capture{51-template-loose.txt}
+\end{frame}
+
+\begin{frame}[fragile]{What it wrote — note the unresolved placeholder}
+  \capture{51-template-output.txt}
+
+  \begin{alertblock}{The default is permissive}
+    \texttt{\{\{OTEL\_ENDPOINT\}\}} was copied through \emph{literally} and the
+    command exited \exitzero. That is how a placeholder ends up in a production
+    config as a literal string.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}[fragile]{\flag{--strict} — refuse, and say what was not done}
+  \capture{52-template-strict.txt}
+
+  {\footnotesize Three things this error does that most do not: it \textbf{names
+  the variable}, it \textbf{offers the remedy syntax}, and it states
+  \textbf{``Nothing was written''}. Exit \exittwo{} — a refusal to act, not a
+  finding.}
+\end{frame}
+
+\begin{frame}{Use cases}
+  \begin{itemize}
+    \item \textbf{nginx / Caddy config from \file{.env}}\\
+      {\footnotesize\texttt{evnx template --input nginx.conf.tpl --output nginx.conf --strict}}
+    \item \textbf{Per-environment app config}\\
+      {\footnotesize\texttt{evnx template --input app.yaml.tpl --output app.yaml --env-name production --strict}}
+    \item \textbf{Optional settings that must not break \flag{--strict}}\\
+      {\footnotesize\texttt{pool: \{\{DB\_POOL\_SIZE|default:10\}\}}}
+  \end{itemize}
+
+  \vspace{1em}
+  \begin{block}{Always \flag{--strict} in CI}
+    Without it, a missing variable becomes a literal string in a generated
+    config and the pipeline goes green.
+  \end{block}
+\end{frame}

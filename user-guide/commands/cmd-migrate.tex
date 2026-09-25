@@ -1,0 +1,57 @@
+\section{evnx migrate}
+
+\begin{frame}{\cmd{evnx migrate} — move secrets to a manager}
+  \begin{block}{Synopsis}\texttt{evnx migrate --to <DEST> [OPTIONS]}\end{block}
+
+  \textbf{Nine destinations.}
+  {\footnotesize \texttt{github-actions}, \texttt{aws-secrets-manager},
+  \texttt{doppler}, \texttt{infisical}, \texttt{gcp-secret-manager},
+  \texttt{azure-keyvault}, \texttt{vercel}, \texttt{heroku}, \texttt{railway}}
+
+  \vspace{0.5em}
+  \begin{alertblock}{Only \texttt{--to github-actions} uploads}
+    The other eight \textbf{print the platform's own CLI commands} for you to
+    run. This is by design and the summary now says so.
+  \end{alertblock}
+
+  \vspace{0.3em}
+  \begin{tabular}{@{}ll@{}}
+    \flag{--dry-run}          & Preview; runs headless \\
+    \flag{--include/--exclude} & Comma-separated globs \\
+    \flag{--strip-prefix/--add-prefix} & Rewrite names on the way \\
+    \flag{--skip-existing/--overwrite} & \texttt{github-actions} only \\
+  \end{tabular}
+\end{frame}
+
+\begin{frame}[fragile]{A real dry run}
+  \capture{43-migrate-doppler.txt}
+\end{frame}
+
+\begin{frame}[fragile]{AWS Secrets Manager}
+  \capturepart{42-migrate-aws.txt}{1}{22}
+\end{frame}
+
+\begin{frame}[fragile]{It refuses rather than guessing}
+  \capture{44-migrate-noto.txt}
+
+  {\footnotesize Before v0.5.0, \cmd{migrate} with no \flag{--to} and no
+  terminal silently selected the \emph{first} destination in the list, printed a
+  plan for somewhere you never chose, and exited \exitzero.}
+\end{frame}
+
+\begin{frame}{Use cases}
+  \begin{itemize}
+    \item \textbf{Seed a GitHub repo's Actions secrets} (the one that uploads)\\
+      {\footnotesize\texttt{evnx migrate --to github-actions --repo owner/repo}}
+    \item \textbf{Move production config into AWS}\\
+      {\footnotesize\texttt{evnx migrate --to aws-secrets-manager --secret-name prod/api/config --dry-run}}
+    \item \textbf{Only the database variables}\\
+      {\footnotesize\texttt{evnx migrate --to doppler --project app --include 'DB\_*'}}
+  \end{itemize}
+
+  \vspace{0.8em}
+  \begin{block}{Migration is once per project}
+    For day-to-day secret delivery, use \cmd{evnx cloud run} instead — see the
+    use-case deck.
+  \end{block}
+\end{frame}

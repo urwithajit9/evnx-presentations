@@ -1,0 +1,157 @@
+% ===========================================================================
+%  evnx 0.5.0 — User Guide
+%  Build:  pdflatex -interaction=nonstopmode main.tex   (run twice for TOC)
+% ===========================================================================
+\documentclass[aspectratio=169,10pt]{beamer}
+
+\newcommand{\capturedir}{../captures}
+\input{../common/evnx-preamble}
+
+\title{evnx \texttt{0.5.0}}
+\subtitle{A complete command guide}
+\author{}
+\date{}
+
+\begin{document}
+
+\begin{frame}[plain]
+  \titlepage
+  \begin{center}\footnotesize
+  \textcolor{evnxMuted}{Every output in this deck is a real run, captured from
+  \texttt{evnx 0.5.0} at commit \texttt{9cfe75b}.}
+  \end{center}
+\end{frame}
+
+% ---------------------------------------------------------------------------
+\begin{frame}{What evnx is}
+  A single static binary that manages \file{.env} files: validation, secret
+  scanning, format conversion, and zero-knowledge encrypted sync.
+
+  \vspace{0.8em}
+  \begin{block}{The problem it solves}
+    Every other config artefact has tooling — schemas, linters, type checking,
+    CI. \file{.env} has a text file, a \file{.gitignore} line, and hope. It also
+    holds the highest-value secrets in the system.
+  \end{block}
+
+  \vspace{0.6em}
+  \begin{tabular}{@{}ll@{}}
+    Binary size & 8.5\,MB, no runtime required \\
+    Language    & Rust (edition 2021, MSRV 1.85) \\
+    Licence     & MIT \\
+    Install     & 9 channels: curl, brew, scoop, winget, npm, pip, cargo, Action, Docker \\
+  \end{tabular}
+\end{frame}
+
+\begin{frame}[fragile]{The command surface}
+  \capture{01-help-root.txt}
+\end{frame}
+
+\begin{frame}{The exit-code contract}
+  \begin{center}
+  \begin{tabular}{@{}cll@{}}
+    \toprule
+    \textbf{Code} & \textbf{Meaning} & \textbf{Example} \\
+    \midrule
+    \exitzero & Clean                & no secrets, valid, in sync \\
+    \exitone  & A verdict, and it is bad & secrets found, drifted, invalid \\
+    \exittwo  & \textbf{No verdict}  & file missing, regex broken, no TTY \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+
+  \vspace{0.8em}
+  \begin{block}{The sentence that makes it legible}
+    \texttt{No verdict: evnx did not finish. This is not a clean result.}
+  \end{block}
+
+  \vspace{0.5em}
+  \begin{alertblock}{Gate on non-zero, never on \texttt{== 1}}
+    A pipeline testing \texttt{\$? -eq 1} treats a crash as a pass. That is how
+    a broken scanner silently reports a clean repository for six months.
+  \end{alertblock}
+
+  {\footnotesize \cmd{backup} and \cmd{restore} extend this with codes 3--6;
+  see their section.}
+\end{frame}
+
+\begin{frame}[fragile]{Output streams — why redirection is safe}
+  \begin{center}
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    \textbf{stdout} & \textbf{stderr} \\
+    \midrule
+    JSON, SARIF, GitHub annotations & human headers and trailers \\
+    converted formats & \texttt{Docs:} links \\
+    generated completions & \texttt{Validation failed: 3 errors} \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+
+  \vspace{0.8em}
+\begin{lstlisting}[style=evnxcode,language=bash]
+evnx validate --format json 2>/dev/null | jq '.issues'
+evnx scan --format sarif  > results.sarif     # clean SARIF
+evnx convert --to json    > config.json       # clean JSON
+\end{lstlisting}
+
+  {\footnotesize Verified for every machine format — the human trailer never
+  contaminates a redirect.}
+\end{frame}
+
+\begin{frame}[fragile]{The five-command core}
+\begin{lstlisting}[style=evnxcode,language=bash]
+evnx init --from-source   # scaffold from what the code actually reads
+evnx scan                 # secrets that look real        (exit 1 = found)
+evnx validate             # missing, placeholder, weak, boolean traps
+evnx sync --check         # is .env.example still honest?  (exit 1 = drifted)
+evnx template --strict    # render a config, refuse to write a broken one
+\end{lstlisting}
+
+  \vspace{0.6em}
+  All five are non-interactive, all five have a machine format, and all five
+  respect the 0/1/2 contract.
+\end{frame}
+
+\begin{frame}{Contents}
+  \tableofcontents[hideallsubsections]
+\end{frame}
+
+% ---------------------------------------------------------------------------
+%  Per-command sections. Each file is self-contained and also builds alone
+%  via user-guide/standalone/<cmd>.tex
+% ---------------------------------------------------------------------------
+\input{commands/cmd-init}
+\input{commands/cmd-add}
+\input{commands/cmd-validate}
+\input{commands/cmd-scan}
+\input{commands/cmd-diff}
+\input{commands/cmd-sync}
+\input{commands/cmd-convert}
+\input{commands/cmd-template}
+\input{commands/cmd-migrate}
+\input{commands/cmd-doctor}
+\input{commands/cmd-spec}
+\input{commands/cmd-backup-restore}
+\input{commands/cmd-auth}
+\input{commands/cmd-vault}
+\input{commands/cmd-cloud}
+\input{commands/cmd-completions}
+
+% ---------------------------------------------------------------------------
+\section*{Closing}
+\begin{frame}{Where to go next}
+  \begin{itemize}
+    \item \textbf{Guides} — \url{https://www.evnx.dev}
+    \item \textbf{Source} — \url{https://github.com/urwithajit9/evnx}
+    \item \textbf{Install} — \texttt{curl -fsSL https://dotenv.space/install.sh | sh}
+  \end{itemize}
+
+  \vspace{1em}
+  \begin{block}{Companion decks}
+    \textbf{Use cases} — workflows that combine commands, and the cloud story.\\
+    \textbf{Architecture} — how the CLI is built, for contributors.
+  \end{block}
+\end{frame}
+
+\end{document}

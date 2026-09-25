@@ -1,0 +1,46 @@
+\section{evnx completions}
+
+\begin{frame}{\cmd{evnx completions} — shell tab-completion}
+  \begin{block}{Synopsis}\texttt{evnx completions <SHELL>}\end{block}
+
+  Supported: \texttt{bash} \quad \texttt{zsh} \quad \texttt{fish} \quad
+  \texttt{powershell}
+
+  \vspace{0.6em}
+  \begin{tabular}{@{}llr@{}}
+    \toprule
+    \textbf{Shell} & \textbf{Install to} & \textbf{Lines} \\
+    \midrule
+    bash       & \file{\textasciitilde/.local/share/bash-completion/completions/evnx} & 3{,}432 \\
+    zsh        & \file{\$\{fpath[1]\}/\_evnx} (must be named \texttt{\_evnx}) & 2{,}771 \\
+    fish       & \file{\textasciitilde/.config/fish/completions/evnx.fish} & 551 \\
+    powershell & append to \texttt{\$PROFILE} & 1{,}376 \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.6em}
+  {\footnotesize An unsupported shell is exit \exittwo{} and names the four
+  valid values.}
+\end{frame}
+
+\begin{frame}[fragile]{Installing}
+\begin{lstlisting}[style=evnxcode,language=bash]
+# bash - current user
+evnx completions bash > ~/.local/share/bash-completion/completions/evnx
+
+# zsh - the file MUST be called _evnx and sit on your $fpath
+evnx completions zsh > "${fpath[1]}/_evnx"
+
+# fish
+evnx completions fish > ~/.config/fish/completions/evnx.fish
+
+# powershell - append to the profile, not per-session
+evnx completions powershell | Out-String | Invoke-Expression
+\end{lstlisting}
+
+  \begin{alertblock}{Regenerate after upgrading}
+    Completion data is baked in at build time. A v0.4.x completion file does not
+    know about \cmd{spec}, \cmd{cloud run}, \flag{--from-source} or
+    \flag{--against}.
+  \end{alertblock}
+\end{frame}

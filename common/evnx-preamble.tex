@@ -1,0 +1,125 @@
+% ---------------------------------------------------------------------------
+%  evnx presentation preamble — shared by all three decks
+%
+%  Engine: pdfLaTeX (also builds under XeLaTeX / LuaLaTeX).
+%  Packages: beamer, listings, xcolor, amssymb, newunicodechar, booktabs,
+%            fancyvrb, hyperref — all in texlive-latex-recommended + beamer.
+%
+%  \capturedir must be defined by the including document BEFORE \input of
+%  this file, e.g.  \newcommand{\capturedir}{../captures}
+% ---------------------------------------------------------------------------
+
+\usetheme{Madrid}
+\usecolortheme{seahorse}
+\usefonttheme{professionalfonts}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{caption}[numbered]
+\setbeamerfont{frametitle}{size=\large}
+\setbeamerfont{title}{size=\LARGE,series=\bfseries}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{amssymb}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{fancyvrb}
+\usepackage{newunicodechar}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,fit,backgrounds}
+
+% ---- palette ---------------------------------------------------------------
+\definecolor{evnxInk}{HTML}{1F2933}
+\definecolor{evnxAccent}{HTML}{2F6F4E}
+\definecolor{evnxWarn}{HTML}{B7791F}
+\definecolor{evnxErr}{HTML}{B03A2E}
+\definecolor{evnxOk}{HTML}{2F6F4E}
+\definecolor{evnxMuted}{HTML}{6B7280}
+\definecolor{evnxTermBg}{HTML}{F5F5F2}
+\definecolor{evnxRule}{HTML}{D1D5DB}
+
+\setbeamercolor{structure}{fg=evnxAccent}
+\setbeamercolor{alerted text}{fg=evnxErr}
+
+% ---- glyph mapping for body text ------------------------------------------
+% evnx emits exactly these 11 non-ASCII characters (enumerated from the
+% captured logs, not guessed).
+\newcommand{\evnxCheck}{\textcolor{evnxOk}{\ensuremath{\checkmark}}}
+\newcommand{\evnxCross}{\textcolor{evnxErr}{\ensuremath{\times}}}
+\newcommand{\evnxWarnSign}{\textcolor{evnxWarn}{\textbf{!}}}
+
+\newunicodechar{✓}{\evnxCheck}
+\newunicodechar{✗}{\evnxCross}
+\newunicodechar{⚠}{\evnxWarnSign}
+\newunicodechar{→}{\ensuremath{\rightarrow}}
+\newunicodechar{↔}{\ensuremath{\leftrightarrow}}
+\newunicodechar{─}{\textendash}
+\newunicodechar{—}{---}
+\newunicodechar{·}{\textperiodcentered}
+\newunicodechar{…}{\ldots}
+\newunicodechar{•}{\textbullet}
+\newunicodechar{️}{}                % U+FE0F variation selector — invisible
+
+% ---- terminal listing style ------------------------------------------------
+% `literate` is required: newunicodechar does not apply inside listings.
+\lstdefinestyle{evnxterm}{
+  basicstyle=\ttfamily\scriptsize,
+  backgroundcolor=\color{evnxTermBg},
+  frame=single,
+  rulecolor=\color{evnxRule},
+  framesep=4pt,
+  breaklines=true,
+  breakatwhitespace=false,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  upquote=true,
+  extendedchars=true,
+  literate=
+    {✓}{{\textcolor{evnxOk}{$\checkmark$}}}1
+    {✗}{{\textcolor{evnxErr}{$\times$}}}1
+    {⚠}{{\textcolor{evnxWarn}{\textbf{!}}}}1
+    {→}{{$\rightarrow$}}1
+    {↔}{{$\leftrightarrow$}}1
+    {─}{{-}}1
+    {—}{{---}}1
+    {·}{{$\cdot$}}1
+    {…}{{\ldots}}1
+    {•}{{\textbullet}}1
+    {️}{{}}0
+    {é}{{\'e}}1
+}
+
+\lstdefinestyle{evnxcode}{
+  style=evnxterm,
+  basicstyle=\ttfamily\scriptsize,
+  backgroundcolor=\color{white},
+}
+
+\lstset{style=evnxterm}
+
+% ---- helper macros ---------------------------------------------------------
+% \capture{file}        — include a real captured run verbatim
+% \capturepart{f}{a}{b} — include lines a..b of a captured run
+\newcommand{\capture}[1]{\lstinputlisting[style=evnxterm]{\capturedir/#1}}
+\newcommand{\capturepart}[3]{%
+  \lstinputlisting[style=evnxterm,firstline=#2,lastline=#3]{\capturedir/#1}}
+
+% a labelled "real output" box
+\newcommand{\realrun}[1]{%
+  \begin{center}\scriptsize\textcolor{evnxMuted}{real run \textendash\ #1}\end{center}}
+
+\newcommand{\cmd}[1]{\texttt{\textbf{#1}}}
+\newcommand{\flag}[1]{\texttt{#1}}
+\newcommand{\file}[1]{\texttt{#1}}
+
+% exit-code chips
+\newcommand{\exitzero}{\textcolor{evnxOk}{\texttt{0}}}
+\newcommand{\exitone}{\textcolor{evnxWarn}{\texttt{1}}}
+\newcommand{\exittwo}{\textcolor{evnxErr}{\texttt{2}}}
+
+% a standard "verified against" footline for factual slides
+\newcommand{\verifiedon}{\tiny\textcolor{evnxMuted}{verified against evnx 0.5.0 @ 9cfe75b}}
+
+\usepackage[colorlinks=true,linkcolor=evnxAccent,urlcolor=evnxAccent]{hyperref}

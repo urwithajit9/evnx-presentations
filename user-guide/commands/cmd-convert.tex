@@ -1,0 +1,80 @@
+\section{evnx convert}
+
+\begin{frame}{\cmd{evnx convert} — render \file{.env} as something else}
+  \begin{block}{Synopsis}\texttt{evnx convert [OPTIONS]}\end{block}
+
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    \flag{--to <FORMAT>}      & Target; omit for interactive selection \\
+    \flag{-o, --output <FILE>} & Or just redirect — stdout is clean \\
+    \flag{--include <GLOB>}   & \texttt{"DB\_*,AWS\_*"} \\
+    \flag{--exclude <GLOB>}   & Applied \emph{after} \flag{--include} \\
+    \flag{--prefix <P>}       & Prepend to every name \\
+    \flag{--transform <MODE>} & \texttt{uppercase}, \texttt{lowercase}, \texttt{camelCase}, \texttt{snake\_case} \\
+    \flag{--base64}           & Base64-encode values \\
+    \flag{--env-name <NAME>}  & Source \file{.env.<NAME>} \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.5em}
+  \textbf{14 formats.}
+  {\footnotesize \texttt{json yaml shell aws-secrets gcp-secrets azure-keyvault
+  github-actions docker-compose kubernetes terraform doppler heroku vercel
+  railway}}
+
+  \vspace{0.3em}
+  {\footnotesize \textbf{Aliases:} \texttt{k8s}, \texttt{tf}, \texttt{yml},
+  \texttt{gh-actions}, \texttt{compose}}
+\end{frame}
+
+\begin{frame}[fragile]{JSON, and why redirection is safe}
+  \capture{37-convert-json.txt}
+
+  {\footnotesize The \texttt{Docs:} trailer is on \textbf{stderr}.
+  \texttt{evnx convert --to json > config.json} produces clean JSON.}
+\end{frame}
+
+\begin{frame}[fragile]{Kubernetes: \texttt{stringData} vs \texttt{data}}
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      {\scriptsize without \flag{--base64}}
+      \capturepart{38-convert-k8s.txt}{1}{12}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      {\scriptsize with \flag{--base64}}
+      \capturepart{39-convert-k8s-b64.txt}{1}{12}
+    \end{column}
+  \end{columns}
+
+  {\footnotesize \texttt{stringData} is plaintext in the manifest — Kubernetes
+  encodes it itself on apply. Use \flag{--base64} only if you want a
+  pre-encoded \texttt{data:} block.}
+\end{frame}
+
+\begin{frame}[fragile]{Filtering — least privilege for a build step}
+  \capture{41-convert-filtered.txt}
+
+  {\footnotesize A front-end build that needs only \texttt{NEXT\_PUBLIC\_*} has
+  no reason to be handed your database password.}
+\end{frame}
+
+\begin{frame}{\cmd{convert} vs \cmd{migrate}}
+  \begin{tabular}{@{}lll@{}}
+    \toprule
+     & \cmd{evnx convert} & \cmd{evnx migrate} \\
+    \midrule
+    Produces & A file or stdout & The platform CLI's own commands \\
+    Uploads  & Never & Only \texttt{--to github-actions} \\
+    Use for  & k8s, Terraform, compose, IaC & A guided one-time move \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{1em}
+  \textbf{Use cases}
+  \begin{itemize}\footnotesize
+    \item \texttt{evnx convert --to kubernetes --include 'DB\_*' -o secret.yaml}
+    \item \texttt{evnx convert --to terraform --prefix APP\_ --transform uppercase}
+    \item \texttt{evnx convert --env-name production --to docker-compose}
+    \item \texttt{evnx convert --to shell > /tmp/env.sh \&\& source /tmp/env.sh}
+  \end{itemize}
+\end{frame}

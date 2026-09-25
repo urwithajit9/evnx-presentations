@@ -1,0 +1,17 @@
+$ evnx diff --env-name production --against staging
+
+  evnx diff  ./.env.production ↔ ./.env.staging
+
+Missing from ./.env.production (present in ./.env.staging):
+  + FEATURE_NEW_CHECKOUT
+
+Different values:
+  ~ APP_ENV
+  ~ DATABASE_URL
+  ~ REDIS_URL
+  ~ SENTRY_DSN
+
+  1 missing from ./.env.production  ·  4 different values
+  Docs: https://www.evnx.dev/guides/commands/diff
+
+[exit 1]

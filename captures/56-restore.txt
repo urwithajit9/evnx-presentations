@@ -1,0 +1,26 @@
+$ evnx restore prod.backup --password-file key.txt --output restored.env
+
+  evnx restore  Decrypt and restore from an encrypted backup
+
+✓ Read backup from prod.backup
+! Reading password from file: key.txt
+  Less secure than interactive prompt — avoid in shared environments.
+
+Backup information:
+  Schema version: v1
+  Original file : .env
+  Created at    : 2026-09-24T18:00:25Z
+  Tool version  : evnx v0.5.0
+  Variables     : 3
+✓ Decryption successful
+  ✓ Decryption key cleared from memory
+
+✓ Restored 3 variable(s) to restored.env
+
+Next steps:
+  1. Run: evnx validate --env restored.env
+  2. Verify your application starts correctly
+  3. Delete the backup file once you have confirmed the restore
+  Docs: https://www.evnx.dev/guides/commands/restore
+
+[exit 0]

@@ -1,0 +1,73 @@
+\section{evnx vault}
+
+\begin{frame}{\cmd{evnx vault} — the unit of sharing}
+  \begin{block}{Synopsis}\texttt{evnx vault <SUBCOMMAND>}\end{block}
+
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    \texttt{vault create <NAME>} & \texttt{app} or \texttt{app/production} \\
+    \texttt{vault list}          & Vaults you can reach \\
+    \texttt{vault delete <NAME>} & Soft delete \\
+    \texttt{vault share <NAME> --user <EMAIL>} & Wrap the key for someone else \\
+    \texttt{vault members <NAME>} & Who has access, at what role \\
+    \texttt{vault role <NAME> --user --role} & Change a role \\
+    \texttt{vault revoke <NAME> --user <EMAIL>} & Remove \textbf{and re-key} \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.5em}
+  {\footnotesize A vault name is \texttt{name} or \texttt{name/environment};
+  \texttt{app/production} binds naturally to \file{.env.production}.}
+\end{frame}
+
+\begin{frame}{Two wrap modes — and the distinction is load-bearing}
+  \begin{tabular}{@{}p{0.26\textwidth}p{0.40\textwidth}p{0.24\textwidth}@{}}
+    \toprule
+    \textbf{Whose copy} & \textbf{How it is wrapped} & \textbf{Post-quantum} \\
+    \midrule
+    The creator's own & XChaCha20 under an HKDF subkey of the master key & \evnxCheck{} symmetric only \\
+    A member's, shared & \textbf{hybrid X25519 + ML-KEM-768} & \evnxCheck{} holds if either survives \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.8em}
+  The creator's copy deliberately does \emph{not} go through ECDH — that would
+  put every solo vault behind X25519 and expose it to
+  harvest-now-decrypt-later.
+
+  \vspace{0.4em}
+  \begin{block}{There is no classical-only path}
+    Not in the crate, not in the CLI, and not in the database, where a CHECK
+    constraint makes half a wrap unstorable. Sharing with an account that has no
+    ML-KEM key on file is \textbf{refused}, not downgraded.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{Revocation actually revokes}
+  \capturepart{63-vault-revoke-help.txt}{1}{8}
+
+  {\footnotesize This is the best-written help in the CLI because it states the
+  \emph{limit} of what the command can do — the sentence most security tooling
+  omits.}
+\end{frame}
+
+\begin{frame}{The honest caveat}
+  \begin{alertblock}{The recipient's public keys come from the server}
+    A malicious server could substitute its own and read what you share. There
+    is no third party to check against, and out-of-band fingerprint verification
+    is not built.
+  \end{alertblock}
+
+  \vspace{0.6em}
+  So \emph{``the server cannot read your secrets''} becomes \emph{``\ldots cannot
+  read them \textbf{passively}''} the moment you share.
+
+  \vspace{0.8em}
+  \textbf{Use cases}
+  \begin{itemize}\footnotesize
+    \item \texttt{evnx vault create app/production}
+    \item \texttt{evnx vault share app/production --user teammate@example.com}
+    \item \texttt{evnx vault role app/production --user t@x.com --role viewer}
+    \item \texttt{evnx vault revoke app/production --user former@example.com}
+  \end{itemize}
+\end{frame}

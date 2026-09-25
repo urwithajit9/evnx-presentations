@@ -1,0 +1,9 @@
+$ evnx add service redis -y
+  config    .evnx.toml
+! .env is not covered by .gitignore — it can be committed
+     →  evnx doctor --fix
+  ✓ added 4 variable(s) to [vars] in .evnx.toml
+✓ Added 5 variables for Redis
+  Docs: https://www.evnx.dev/guides/commands/add
+
+[exit 0]

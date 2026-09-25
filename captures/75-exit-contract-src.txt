@@ -1,0 +1,60 @@
+=== main.rs: the exit-code contract (real source) ===
+26:/// Resolve which `.env.<name>` a command operates on, or exit 2.
+30:/// and `?` surfaces that through `main`'s `Result` as exit **1** — which
+52:            std::process::exit(2);
+79:    // and `?` would surface it through `main`'s `Result` as exit **1** — which
+92:            std::process::exit(2);
+104:    // ⚠️ Bound, not returned. See the exit-code handling at the end of `main`.
+136:            exit_zero,
+154:            exit_zero,
+168:            exit_zero,
+178:            exit_zero,
+223:                Ok(exit_code) => std::process::exit(exit_code),
+232:                    std::process::exit(2);
+401:                    std::process::exit(be.exit_code());
+437:                        std::process::exit(re.exit_code());
+490:    // ⚠️ An error is exit **2**, not 1.
+503:    // Commands that exit on their own — `scan`, `doctor`, `backup`, `restore`
+509:        std::process::exit(2);
+
+--- the central mapping ---
+fn main() -> Result<()> {
+    let cli = Cli::parse();
+
+    // Configure colored output
+    if cli.no_color {
+        colored::control::set_override(false);
+    }
+
+    // Project policy from `.evnx.toml`, loaded once and applied per command
+    // below. Precedence is config < flag throughout: see `core::config::pick`.
+    //
+    // ⚠️ Announced rather than applied silently. `[scan] severity` and
+    // `[scan] exclude` can weaken what the scanner reports, and the file is
+    // committed — so one commit could otherwise narrow scanning for everyone who
+    // clones the repository with nothing on the command line to show it.
+    // ⚠️ An **absolute** directory, not `Path::new(".")`. `find` walks upward with
+    // `Path::parent`, and `".".parent()` is `""` rather than the parent directory
+    // — so a relative start makes the walk inert and the file is found only in
+    // the working directory. `cloud::sync` and `cloud::status` already pass
+    // `current_dir()` for this reason.
+    let here = std::env::current_dir().context("reading the current directory")?;
+    // ⚠️ Not `?`. A `.evnx.toml` that will not parse is "evnx could not run",
+    // and `?` would surface it through `main`'s `Result` as exit **1** — which
+    // for `scan` is the code that means *secrets found*, and for `sync --check`
+    // means *drifted*. A malformed config would have read as a finding.
+    //
+    // 2 is the code every command with a three-value contract already uses for
+    // "no verdict", so a broken config reports the same thing everywhere rather
+    // than impersonating whatever failure that command happens to number 1.
+    let loaded = match evnx::core::config::load(&here) {
+        Ok(loaded) => loaded,
+        Err(e) => {
+            eprintln!("{} {:#}", "Error:".on_red().bold(), e);
+            eprintln!();
+            eprintln!("No verdict: evnx did not run. This is not a clean result.");
+            std::process::exit(2);
+        }
+    };
+    if let Some(source) = &loaded.source {
+        evnx::utils::ui::config_banner(source, &loaded.config.security_overrides(), cli.quiet);

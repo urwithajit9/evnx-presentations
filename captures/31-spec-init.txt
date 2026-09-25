@@ -1,0 +1,13 @@
+$ /home/ajit/Pictures/ajit/evnx-cloud/evnx/target/release/evnx spec init
+
+  evnx spec  Generate the variable contract
+
+✓ wrote 8 variable(s) to .evnx.toml
+
+Next steps:
+  1. Read the generated entries — every field is a guess from your files
+  2. Mark optional variables with `required = false`
+  3. Commit .evnx.toml; the spec is the contract
+  Docs: https://www.evnx.dev/guides/commands/spec
+
+[exit 0]

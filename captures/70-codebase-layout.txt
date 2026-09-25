@@ -1,0 +1,46 @@
+=== src/ top-level layout ===
+assets
+cli.rs
+cloud
+commands
+core
+docs.rs
+formats
+lib.rs
+main.rs
+schema
+utils
+
+=== module line counts (top 25) ===
+  39596 total
+   1494 src/cli.rs
+   1337 src/cloud/auth.rs
+   1243 src/commands/sync/executor.rs
+   1241 src/cloud/vault.rs
+   1150 src/commands/doctor/runner.rs
+   1111 src/core/parser.rs
+   1076 src/cloud/client.rs
+   1033 src/commands/template.rs
+    996 src/commands/backup/core.rs
+    925 src/cloud/sync.rs
+    911 src/commands/convert.rs
+    863 src/core/gitignore.rs
+    837 src/commands/validate/checks.rs
+    828 src/commands/restore/core.rs
+    824 src/utils/ui.rs
+    748 src/commands/scan/detector.rs
+    718 src/commands/diff.rs
+    670 src/core/config.rs
+    625 src/commands/validate/mod.rs
+    611 src/commands/migrate/destinations/github.rs
+    605 src/commands/scan/output.rs
+    566 src/commands/scan/runner.rs
+    514 src/commands/init/detect.rs
+    513 src/main.rs
+    513 src/commands/migrate/destinations/mod.rs
+
+=== totals ===
+rust files: 118
+src lines : 39596
+test files: 15
+test lines: 8583

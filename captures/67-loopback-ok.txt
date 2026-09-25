@@ -1,0 +1,16 @@
+$ evnx cloud status --server http://127.0.0.1:8080
+evnx cloud
+  server    http://127.0.0.1:8080
+  status    not signed in
+
+  No credentials for this server.
+    evnx auth register   create an account
+    evnx auth login      sign in on this machine
+
+  Also signed in to:
+    https://api.evnx.dev
+  Use --server to act on one of those instead.
+
+  Docs: https://www.evnx.dev/guides/commands/cloud
+
+[exit 0]

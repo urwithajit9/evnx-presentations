@@ -1,0 +1,39 @@
+=== scan module: separation of concerns ===
+src/commands/scan/detector.rs        748 lines   //! Secret detection strategies and registry
+src/commands/scan/filters.rs         507 lines   //! File filtering and collection utilities.
+src/commands/scan/models.rs          502 lines   //! Data models for secret scanning results.
+src/commands/scan/mod.rs             203 lines   //! Secret scanning command module.
+src/commands/scan/output.rs          605 lines   //! Output formatters for scan results.
+src/commands/scan/patternset.rs      456 lines   //! Custom scan patterns — the matcher beh
+src/commands/scan/runner.rs          566 lines   //! Scan orchestration and execution logic.
+
+=== validate module ===
+src/commands/validate/checks.rs      837 lines
+src/commands/validate/fixer.rs       338 lines
+src/commands/validate/mod.rs         625 lines
+src/commands/validate/types.rs        85 lines
+
+=== core module ===
+src/core/config.rs                   670 lines
+src/core/converter.rs                370 lines
+src/core/env_name.rs                 384 lines
+src/core/gitignore.rs                863 lines
+src/core/glob.rs                     132 lines
+src/core/mod.rs                       12 lines
+src/core/parser.rs                  1111 lines
+src/core/spec.rs                     390 lines
+
+=== cloud module ===
+src/cloud/auth.rs                   1337 lines
+src/cloud/binding.rs                 308 lines
+src/cloud/client.rs                 1076 lines
+src/cloud/config.rs                  353 lines
+src/cloud/creds.rs                   496 lines
+src/cloud/mod.rs                     273 lines
+src/cloud/run.rs                     454 lines
+src/cloud/session.rs                 300 lines
+src/cloud/status.rs                  221 lines
+src/cloud/sync.rs                    925 lines
+src/cloud/token.rs                   438 lines
+src/cloud/totp.rs                    284 lines
+src/cloud/vault.rs                  1241 lines

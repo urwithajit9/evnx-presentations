@@ -1,0 +1,96 @@
+\section{evnx backup / restore}
+
+\begin{frame}{\cmd{evnx backup} \& \cmd{evnx restore}}
+  \textbf{Purpose.} An encrypted copy of a \file{.env} you can store anywhere.
+
+  \vspace{0.4em}
+  \begin{columns}[T]
+    \begin{column}{0.49\textwidth}
+      \texttt{evnx backup [ENV] [OPTS]}
+      \begin{tabular}{@{}l@{}}
+        \flag{--output <FILE>} \\
+        \flag{--key-file <PATH>} \\
+        \flag{--keep <N>} \\
+        \flag{--env-name <NAME>} \\
+        \flag{--verify} \\
+      \end{tabular}
+    \end{column}
+    \begin{column}{0.49\textwidth}
+      \texttt{evnx restore <BACKUP> [OPTS]}
+      \begin{tabular}{@{}l@{}}
+        \flag{--output <FILE>} \\
+        \flag{--password-file <PATH>} \\
+        \flag{--inspect} \\
+        \flag{--dry-run} \\
+      \end{tabular}
+    \end{column}
+  \end{columns}
+
+  \vspace{0.6em}
+  \begin{block}{Each side also accepts the other's spelling}
+    \cmd{backup} documents \flag{--key-file} and \cmd{restore} documents
+    \flag{--password-file}, but \emph{both} accept \emph{both} — verified — and
+    both honour \texttt{EVNX\_PASSWORD}. One key file always round-trips,
+    including a binary one.
+  \end{block}
+
+  \vspace{0.3em}
+  {\footnotesize Crypto: Argon2id over the passphrase $\rightarrow$ AES-256-GCM.
+  Output is Base64.}
+\end{frame}
+
+\begin{frame}[fragile]{Backing up}
+  \capture{53-backup.txt}
+\end{frame}
+
+\begin{frame}[fragile]{\flag{--verify}: decrypt it before trusting it}
+  \capture{53b-backup-verify.txt}
+
+  {\footnotesize Without \flag{--verify} the summary reports
+  \texttt{Verified: no} — the backup was written but never read back. The advice
+  ``test the restore before deleting the original'' is only as good as the test
+  you actually run.}
+\end{frame}
+
+\begin{frame}[fragile]{\flag{--inspect}: what is in this backup?}
+  \capture{54-restore-inspect.txt}
+
+  {\footnotesize Key names only. Values are never printed, nothing is written,
+  and no overwrite prompt appears. This is the right way to check a backup
+  before committing to it.}
+\end{frame}
+
+\begin{frame}[fragile]{The round trip, verified}
+  \capture{56-restore.txt}
+  \vspace{-0.3em}
+  \capture{57-restore-diff.txt}
+\end{frame}
+
+\begin{frame}{Exit codes are richer here — deliberately}
+  \begin{tabular}{@{}cl@{}}
+    \toprule
+    \textbf{Code} & \textbf{Meaning} \\
+    \midrule
+    \exitzero & Success \\
+    \exittwo  & Wrong password or corrupt backup \\
+    \texttt{3} & Backup file not found \\
+    \texttt{4} & Cancelled (informational) \\
+    \texttt{5} & Validation fallback (informational) \\
+    \texttt{6} & Integrity check failed \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.8em}
+  \textbf{Use cases}
+  \begin{itemize}\footnotesize
+    \item Nightly, with rotation: \texttt{evnx backup --env-name production --key-file /run/secrets/k --keep 7}
+    \item CI restore with no file on disk: \texttt{EVNX\_PASSWORD="\$P" evnx restore prod.backup}
+    \item Before a risky edit: \texttt{evnx backup \&\& \ldots}
+  \end{itemize}
+
+  \vspace{0.4em}
+  \begin{alertblock}{There is deliberately no \flag{--force} on restore}
+    Restoring over an existing file always prompts. The passphrase cannot be
+    recovered — if you lose it, the backup is gone.
+  \end{alertblock}
+\end{frame}

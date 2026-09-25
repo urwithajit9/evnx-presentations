@@ -1,0 +1,14 @@
+$ evnx completions --help
+Generate shell completions
+
+Usage: evnx completions [OPTIONS] <SHELL>
+
+Arguments:
+  <SHELL>  
+
+Options:
+  -v, --verbose   Enable verbose output
+  -q, --quiet     Suppress non-essential output
+      --no-color  Disable colored output
+  -h, --help      Print help
+  -V, --version   Print version

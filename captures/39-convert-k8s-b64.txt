@@ -1,0 +1,20 @@
+$ evnx convert --to kubernetes --base64
+  config    .evnx.toml
+apiVersion: v1
+kind: Secret
+metadata:
+  name: app-secrets
+type: Opaque
+data:
+  APP_NAME: b3JkZXJzLWFwaQ==
+  DEBUG: ZmFsc2U=
+  DATABASE_URL: cG9zdGdyZXNxbCthc3luY3BnOi8vYXBpOnMzY3IzdEBsb2NhbGhvc3Q6NTQzMi9vcmRlcnM=
+  REDIS_URL: cmVkaXM6Ly86ZGV2cGFzc0Bsb2NhbGhvc3Q6NjM3OS8w
+  SECRET_KEY: NDIwODBlOTUwNDFiODNmNTA4NTYwMmMwZWJkMjFhMmNmYjdlNGRhYTA3Nzc2M2JiZDVlMjJhM2JkNTRkNzMzMQ==
+  SENDGRID_API_KEY: U0cuYUJjRGVGZ0hpSmtMbU5vUHFSc1R1Vi53WHlaMTIzNDU2Nzg5MGFCY0RlRmdIaUprTG1Ob1Bx
+  STRIPE_SECRET_KEY: c2tfbGl2ZV81MVF3RXJUeVVpT3BBc0RmR2hKa0x6WGNWYk5tMTIzNDU2Nzg5MA==
+  SENTRY_DSN: eW91cl92YWx1ZV9oZXJl
+
+  Docs: https://www.evnx.dev/guides/commands/convert
+
+[exit 0]

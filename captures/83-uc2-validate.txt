@@ -1,0 +1,20 @@
+$ evnx validate
+
+  evnx validate  Check environment configuration
+
+  !  STRIPE_SECRET_KEY is assigned 2 times (lines 3, 5) — only line 5 takes effect
+     .env
+     →  Remove the earlier assignments of STRIPE_SECRET_KEY, or rename them if they were meant to differ
+
+  !  DEBUG is assigned 2 times (lines 4, 6) — only line 6 takes effect
+     .env
+     →  Remove the earlier assignments of DEBUG, or rename them if they were meant to differ
+
+  !  DEBUG is set to "False" (string, not boolean)
+     .env
+     →  Use false or 0 for proper boolean handling
+     ·  fixable with --fix
+
+  3 warnings
+  Docs: https://www.evnx.dev/guides/commands/validate
+[exit 0]

@@ -1,0 +1,49 @@
+\section{evnx add}
+
+\begin{frame}{\cmd{evnx add} — extend an existing \file{.env}}
+  \begin{block}{Synopsis}\texttt{evnx add <SUBCOMMAND> [OPTIONS]}\end{block}
+
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    \texttt{add service <NAME>}   & \texttt{postgresql}, \texttt{redis}, \texttt{stripe}\ldots \\
+    \texttt{add framework <NAME>} & needs \flag{-l, --language} \\
+    \texttt{add blueprint <ID>}   & a whole stack, without overwriting \\
+    \texttt{add custom}           & interactive \\
+    \midrule
+    \flag{-p, --path <PATH>}      & Target directory \\
+    \flag{-y, --yes}              & Skip confirmation \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.5em}
+  {\footnotesize Discover the vocabulary with \cmd{evnx init --list-components}.}
+\end{frame}
+
+\begin{frame}[fragile]{A real run}
+  \capture{45-add-service.txt}
+
+  {\footnotesize It never overwrites a value that is already there, and it
+  cross-checks \file{.gitignore} — \cmd{add} is the command most likely to
+  introduce a secret-shaped variable into a trackable file.}
+\end{frame}
+
+\begin{frame}{Use cases}
+  \begin{itemize}
+    \item \textbf{Adding Redis to a running project}\\
+      {\footnotesize\texttt{evnx add service redis -y}}
+    \item \textbf{A Django app inside a monorepo}\\
+      {\footnotesize\texttt{evnx add framework --language python django -p services/web}}
+    \item \textbf{A whole stack at once, safely}\\
+      {\footnotesize\texttt{evnx add blueprint t3\_modern}}
+  \end{itemize}
+
+  \vspace{0.8em}
+  \begin{block}{\cmd{init} vs \cmd{add}}
+    \cmd{init} is for a project with no \file{.env} at all and refuses to
+    overwrite one. \cmd{add} is the supported way to extend afterwards.
+  \end{block}
+
+  \vspace{0.4em}
+  {\footnotesize An unknown component is exit \exittwo{} and names
+  \cmd{evnx init --list-components} as the way to find the right one.}
+\end{frame}

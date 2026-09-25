@@ -1,0 +1,51 @@
+=== evnx-crypto: public API surface ===
+53:pub struct MasterKey([u8; MASTER_KEY_LEN]);
+89:pub fn generate_salt() -> [u8; SALT_LEN]
+105:pub fn derive_master_key(password: &[u8], salt: &[u8; SALT_LEN]) -> Result<MasterKey, CryptoError>
+135:pub fn derive_srp_password(
+167:pub fn salt_to_base64(salt: &[u8; SALT_LEN]) -> String
+176:pub fn salt_from_base64(s: &str) -> Result<[u8; SALT_LEN], CryptoError>
+12:pub enum CryptoError
+64:pub struct SrpVerifier
+74:pub struct SrpClientEphemeral
+85:pub struct SrpClientProof
+136:pub fn compute_verifier(
+168:pub fn generate_client_ephemeral() -> Result<SrpClientEphemeral, CryptoError>
+209:pub fn compute_client_proof(
+262:pub fn verify_server_proof(
+24:pub fn b64_encode(bytes: &[u8]) -> String
+32:pub fn b64_decode(s: &str, what: &str) -> Result<Vec<u8>, CryptoError>
+39:pub fn b64_decode_array<const N: usize>(s: &str, what: &str) -> Result<[u8; N], CryptoError>
+32:pub struct SecretBytes(Zeroizing<Vec<u8>>);
+95:pub struct SecretString(Zeroizing<String>);
+149:pub struct SecretArray<const N: usize>([u8; N]);
+217:pub fn zeroize_slice(buf: &mut [u8])
+42:pub struct VaultKey([u8; VAULT_KEY_LEN]);
+87:pub struct EncryptedBlob
+118:pub fn blob_hash(ciphertext: &[u8]) -> String
+130:pub fn vault_aad(vault_id: &str, version: u32) -> Vec<u8>
+164:pub fn encrypt_vault(
+198:pub fn decrypt_vault(
+249:pub fn reencrypt_vault(
+270:pub fn wrap_vault_key_with_master_key(
+293:pub fn unwrap_vault_key_with_master_key(
+
+=== evnx-crypto version ===
+name = "evnx-crypto"
+version = "0.2.1"
+
+=== how evnx consumes it ===
+7:# evnx-crypto (zeroize_derive needs edition2024); it is declared at package level
+102:evnx-crypto = { version = "0.2.1", optional = true }
+104:# dependency of evnx-crypto, so naming it here adds no crates.
+107:# Already in the graph via evnx-crypto, so this adds no crates.
+144:# the success path in CI. Both are already in the graph via evnx-crypto, so this
+181:cloud   = ["dep:evnx-crypto", "dep:reqwest", "dep:hex", "dep:blake3", "dep:toml_edit", "dep:qrcode"]
+
+=== evnx-server: route modules ===
+auth.rs members.rs mod.rs rekey.rs sessions.rs tokens.rs users.rs vaults.rs versions.rs 
+=== evnx-server: migrations ===
+001_initial.sql 002_add_x25519_pubkey.sql 003_totp_backup_codes.sql 004_mlkem_hybrid.sql 005_role_is_a_closed_set.sql 006_audit_is_append_only.sql 
+=== evnx-app: framework ===
+    "next": "16.3.5",
+    "react": "19.2.8",

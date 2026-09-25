@@ -1,0 +1,407 @@
+% ===========================================================================
+%  evnx 0.5.0 — Use Cases
+%  Build:  pdflatex -interaction=nonstopmode main.tex   (twice for TOC)
+% ===========================================================================
+\documentclass[aspectratio=169,10pt]{beamer}
+
+\newcommand{\capturedir}{../captures}
+\input{../common/evnx-preamble}
+
+\title{evnx in practice}
+\subtitle{Workflows that combine commands --- and what cloud sync adds}
+\date{}
+
+\begin{document}
+
+\begin{frame}[plain]
+  \titlepage
+  \begin{center}\footnotesize
+  \textcolor{evnxMuted}{evnx 0.5.0 @ \texttt{9cfe75b}. Every terminal block is a
+  real run.}
+  \end{center}
+\end{frame}
+
+\begin{frame}{Why this deck exists}
+  The command guide shows each command alone. Almost nothing useful is one
+  command.
+
+  \vspace{0.8em}
+  \begin{block}{Five workflows}
+    \begin{enumerate}
+      \item \textbf{Day one} — a project with no \file{.env} discipline at all
+      \item \textbf{The breaking PR} — catching a leak before review
+      \item \textbf{The CI gate} — annotations, SARIF, and what fails open
+      \item \textbf{Many environments} — staging vs production drift
+      \item \textbf{Cloud sync} — a team, a pipeline, and no plaintext file
+    \end{enumerate}
+  \end{block}
+
+  \vspace{0.6em}
+  {\footnotesize Each ends with the exact command chain, copy-pasteable.}
+\end{frame}
+
+\begin{frame}{Contents}\tableofcontents[hideallsubsections]\end{frame}
+
+% =========================================================================
+\section{Day one}
+
+\begin{frame}{The situation}
+  A repository you just cloned. There is a \file{.env} on someone's laptop, a
+  \file{.env.example} that is six months stale, and a README that says
+  ``ask Priya for the keys''.
+
+  \vspace{0.8em}
+  \begin{block}{What you want}
+    A \file{.env.example} that is true, a \file{.gitignore} that is correct, and
+    a way to tell whether your local \file{.env} is actually complete.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{\cmd{init --from-source}: ask the code, not the README}
+  \capturepart{80-uc1-onboard.txt}{1}{20}
+\end{frame}
+
+\begin{frame}[fragile]{What it produced}
+  \capturepart{80-uc1-onboard.txt}{21}{48}
+
+  {\footnotesize Each variable carries the \texttt{file:line} where the code
+  reads it. That is the difference between a template someone wrote once and a
+  template derived from the program.}
+\end{frame}
+
+\begin{frame}[fragile]{The chain}
+\begin{lstlisting}[style=evnxcode,language=bash]
+git clone <repo> && cd <repo>
+
+evnx doctor                      # gitignore, permissions, structure
+evnx init --from-source          # propose a template from the code
+evnx init --from-source --yes    # accept it
+
+evnx sync --direction reverse --force   # fill .env from the template
+$EDITOR .env                            # put the real values in
+evnx validate                           # did I miss any?
+\end{lstlisting}
+
+  \begin{block}{Why \flag{--from-source} and not \flag{--detect}}
+    \flag{--detect} reads \file{package.json} and infers a stack.
+    \flag{--from-source} reads \texttt{process.env.X} in the actual code. Only
+    the second can answer ``is my template complete?''.
+  \end{block}
+\end{frame}
+
+% =========================================================================
+\section{The breaking PR}
+
+\begin{frame}[fragile]{The situation}
+  Nobody types \texttt{LEAK\_MY\_KEY=true}. Someone pastes a key from the Stripe
+  dashboard to debug locally, and flips \texttt{DEBUG} while they are in there
+  --- and quotes it, because every other value on the page is quoted.
+
+  \vspace{0.8em}
+\begin{semiverbatim}\small
++ STRIPE_SECRET_KEY=sk_live_51QwErTy...
++ DEBUG="False"
+\end{semiverbatim}
+
+  \vspace{0.6em}
+  {\footnotesize Two lines. Three problems: a live key in a tracked-adjacent
+  file, a duplicate assignment that silently wins, and a boolean that is
+  \texttt{True} in Python.}
+\end{frame}
+
+\begin{frame}[fragile]{Before: green}
+  \capture{81-uc2-before.txt}
+\end{frame}
+
+\begin{frame}[fragile]{\cmd{scan} catches the leak}
+  \capture{82-uc2-scan.txt}
+
+  {\footnotesize Note it distinguishes \texttt{(test)} from \texttt{(LIVE)} and
+  names where to revoke. Values are masked.}
+\end{frame}
+
+\begin{frame}[fragile]{\cmd{validate} catches the other two}
+  \capturepart{83-uc2-validate.txt}{1}{18}
+\end{frame}
+
+\begin{frame}[fragile]{The boolean trap, in one line}
+\begin{semiverbatim}\small
+>>> import os
+>>> os.getenv("DEBUG")
+'False'
+>>> bool(os.getenv("DEBUG"))
+True          \# <- debug mode is ON in production
+\end{semiverbatim}
+
+  \vspace{0.6em}
+  \texttt{bool} of a non-empty string is \texttt{True}. Always. \texttt{'False'}
+  is a non-empty string.
+
+  \vspace{0.8em}
+  \begin{block}{And the duplicate}
+    \texttt{STRIPE\_SECRET\_KEY is assigned 2 times (lines 3, 5) — only line 5
+    takes effect.} In a 60-line file that is invisible, and the value someone
+    just carefully edited is the one that loses.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{The chain: a pre-commit hook}
+\begin{lstlisting}[style=evnxcode,language=bash]
+cat > .git/hooks/pre-commit <<'EOF'
+#!/bin/sh
+evnx scan --severity high || {
+  echo "evnx: secrets detected - commit aborted"; exit 1; }
+EOF
+chmod +x .git/hooks/pre-commit
+\end{lstlisting}
+
+  Or through \texttt{pre-commit}:
+
+\begin{lstlisting}[style=evnxcode,language=yaml]
+repos:
+  - repo: https://github.com/urwithajit9/evnx
+    rev: v0.5.0
+    hooks:
+      - id: evnx-scan
+      - id: evnx-validate
+\end{lstlisting}
+\end{frame}
+
+% =========================================================================
+\section{The CI gate}
+
+\begin{frame}[fragile]{A workflow that blocks the merge}
+\begin{lstlisting}[style=evnxcode,language=yaml]
+name: env-guard
+on: pull_request
+jobs:
+  guard:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write        # required for the SARIF upload
+    steps:
+      - uses: actions/checkout@v4
+      - run: curl -fsSL https://dotenv.space/install.sh | sh
+
+      - run: evnx scan --severity high --format github    # blocks the PR
+
+      - if: always()
+        run: evnx scan --format sarif --exit-zero > evnx.sarif
+      - if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with: { sarif_file: evnx.sarif }
+
+      - run: evnx sync --check
+\end{lstlisting}
+\end{frame}
+
+\begin{frame}[fragile]{The same steps, run for real}
+  \capture{85-uc3-ci.txt}
+\end{frame}
+
+\begin{frame}{Three things that cost real debugging time}
+  \begin{enumerate}
+    \item \textbf{\flag{--exit-zero} on the SARIF step is not optional.}
+          Without it the step fails, a failed step means
+          \texttt{upload-sarif} never runs, and your Security tab stays empty
+          while you believe it is working.
+    \item \textbf{Two scan runs, deliberately.} The first blocks the pull
+          request with inline annotations. The second must not fail.
+    \item \textbf{\flag{--severity high} is the gate.} It filters what is
+          reported, counted \emph{and} exited on. The default (\texttt{low})
+          blocks on every high-entropy string — including public keys that are
+          meant to be public.
+  \end{enumerate}
+
+  \vspace{0.5em}
+  \begin{alertblock}{And one that does not exist}
+    There is no \flag{--exit-code} and no \flag{--path}. Paths are positional;
+    the exit code is the default behaviour and \flag{--exit-zero} is the
+    opt-\emph{out}.
+  \end{alertblock}
+\end{frame}
+
+% =========================================================================
+\section{Many environments}
+
+\begin{frame}[fragile]{Drift between staging and production}
+  \capture{86-uc4-envdiff.txt}
+
+  {\footnotesize \flag{--against} compares two \emph{real} environments and
+  exits \exitzero{} when they match — unlike the default comparison against a
+  template, where every filled-in value differs by construction.}
+\end{frame}
+
+\begin{frame}[fragile]{Context-aware checks}
+  \capturepart{87-uc4-prodcheck.txt}{1}{12}
+
+  {\footnotesize This fires only because a \file{docker-compose.yml} is present.
+  \texttt{localhost} is correct on a laptop and wrong inside a container, so the
+  same value is a finding in one project and not in another.}
+\end{frame}
+
+\begin{frame}[fragile]{The chain}
+\begin{lstlisting}[style=evnxcode,language=bash]
+# is production missing anything staging has?
+evnx diff --env-name production --against staging \
+     --ignore-keys APP_ENV,FEATURE_NEW_CHECKOUT
+
+# is each environment internally valid?
+for e in development staging production; do
+  evnx validate --env-name "$e" --format json 2>/dev/null \
+    | jq -r '.issues[].message'
+done
+
+# render the real config for one of them
+evnx template --input app.yaml.tpl --output app.yaml \
+     --env-name production --strict
+\end{lstlisting}
+\end{frame}
+
+% =========================================================================
+\section{Cloud sync}
+
+\begin{frame}{What the cloud adds --- and what it does not}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \textbf{It adds}
+      \begin{itemize}\footnotesize
+        \item One command to get the team's \file{.env}
+        \item Versioned history you can roll back
+        \item Sharing that can be revoked
+        \item Secrets into CI with no file on disk
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \textbf{It does not add}
+      \begin{itemize}\footnotesize
+        \item Trust in the server --- it holds ciphertext
+        \item Freedom from the master password
+        \item Protection from a malicious server \emph{when sharing}
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \vspace{0.8em}
+  \begin{block}{The guarantee}
+    Encryption happens on your machine. The server stores opaque blobs and
+    cannot read your secrets --- not with full database access.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{The chain: a team}
+\begin{lstlisting}[style=evnxcode,language=bash]
+evnx auth register                       # keys generated locally
+evnx auth totp enable                    # QR in the terminal
+evnx vault create shop/production
+evnx cloud link shop/production          # bind this directory
+
+evnx cloud push                          # encrypt .env, upload ciphertext
+evnx vault share shop/production --user teammate@example.com
+
+# teammate, on another machine
+evnx auth login && evnx cloud pull       # .env.production appears
+\end{lstlisting}
+
+  \begin{block}{Naming}
+    A vault is \texttt{name} or \texttt{name/environment}. Pushing
+    \texttt{shop/production} picks up \file{.env.production}, and cloud commands
+    always print which file they chose.
+  \end{block}
+\end{frame}
+
+\begin{frame}[fragile]{The chain: a pipeline, with no plaintext file}
+\begin{lstlisting}[style=evnxcode,language=bash]
+# a read-only token scoped to one vault
+evnx auth token create --scope read_only --vault shop/production
+
+# in CI - the secrets never touch the filesystem
+echo "$EVNX_MASTER_PASSWORD" | \
+  evnx cloud run --vault shop/production --password-stdin -- ./deploy.sh
+
+# least privilege: the build step sees only the public variables
+echo "$EVNX_MASTER_PASSWORD" | \
+  evnx cloud run --vault shop/production --password-stdin \
+       --include 'NEXT_PUBLIC_*' -- npm run build
+\end{lstlisting}
+
+  \vspace{0.3em}
+  {\footnotesize Values travel in the environment block --- not \texttt{argv} ---
+  so nothing appears in \texttt{ps}, in shell history, or on disk. A filter
+  matching nothing is an \textbf{error}, not a silent run with zero secrets.}
+\end{frame}
+
+\begin{frame}[fragile]{Verify the claim yourself}
+\begin{lstlisting}[style=evnxcode,language=bash]
+# the secret must NOT appear in the child's command line
+evnx cloud run --vault shop/production -- \
+     sh -c "tr '\\0' '\\n' < /proc/self/cmdline"
+
+# but it IS in the environment the child was handed
+evnx cloud run --vault shop/production -- printenv DATABASE_URL
+\end{lstlisting}
+
+  \vspace{0.4em}
+  Published recipe:
+  \url{https://www.evnx.dev/guides/reference/verifying-the-round-trip}
+
+  \vspace{0.6em}
+  \begin{alertblock}{Say the limit out loud}
+    \cmd{cloud run} removes the plaintext \emph{file}, not the master password.
+    Anyone who tells you their secrets tool eliminated the root secret is
+    selling you something.
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}[fragile]{The transport guard}
+  \capture{66-tls-guard.txt}
+
+  {\footnotesize Loopback is exempt so local development works. The error
+  explains the \emph{threat}, not just the rule.}
+\end{frame}
+
+\begin{frame}{The honest caveat on sharing}
+  \begin{alertblock}{The recipient's public keys come from the server}
+    A malicious server could substitute its own and read what you share. There
+    is no third party to check against, and out-of-band fingerprint verification
+    is not built.
+  \end{alertblock}
+
+  \vspace{0.6em}
+  So \emph{``the server cannot read your secrets''} becomes \emph{``\ldots cannot
+  read them \textbf{passively}''} the moment you share.
+
+  \vspace{0.8em}
+  \begin{block}{What is solid}
+    A solo vault is wrapped under your master key --- symmetric only, so
+    post-quantum safe. A shared vault uses hybrid X25519 + ML-KEM-768 with
+    \textbf{no} classical-only fallback, and revoking a member re-keys the
+    vault so they cannot read versions pushed after removal.
+  \end{block}
+\end{frame}
+
+% =========================================================================
+\section*{Closing}
+\begin{frame}{Pick the workflow that fits}
+  \begin{tabular}{@{}p{0.34\textwidth}p{0.60\textwidth}@{}}
+    \toprule
+    \textbf{You are} & \textbf{Start with} \\
+    \midrule
+    Joining a project      & \texttt{evnx doctor \&\& evnx init --from-source} \\
+    Reviewing a PR         & \texttt{evnx scan --severity high --format github} \\
+    Wiring CI              & \texttt{scan --format sarif} + \texttt{sync --check} \\
+    Managing environments  & \texttt{evnx diff --env-name X --against Y} \\
+    Sharing with a team    & \texttt{evnx vault share} + \texttt{cloud push/pull} \\
+    Deploying              & \texttt{evnx cloud run -- ./deploy.sh} \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{1em}
+  \begin{center}
+  \url{https://www.evnx.dev} \quad\textperiodcentered\quad
+  \texttt{curl -fsSL https://dotenv.space/install.sh | sh}
+  \end{center}
+\end{frame}
+
+\end{document}

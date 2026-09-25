@@ -1,0 +1,35 @@
+$ evnx validate --no-color
+  config    .evnx.toml
+
+  evnx validate  Check environment configuration
+
+  ✗  Missing required variable: SENTRY_DSN
+     .env
+     →  Add SENTRY_DSN=<value> to .env
+     ·  fixable with --fix
+
+  ✗  SECRET_KEY looks like a placeholder
+     .env
+     →  Run: openssl rand -hex 32
+     ·  fixable with --fix
+
+  !  DEBUG is set to "False" (string, not boolean)
+     .env
+     →  Use false or 0 for proper boolean handling
+     ·  fixable with --fix
+
+  ✗  SECRET_KEY is too weak or predictable
+     .env
+     →  Run: openssl rand -hex 32
+     ·  fixable with --fix
+
+  3 errors  ·  1 warning
+
+Next steps:
+  1. Review and fix the errors above
+  2. Run with --fix to auto-correct common issues
+  3. Use --ignore issue_type to suppress specific warnings
+Validation failed: 3 errors
+  Docs: https://www.evnx.dev/guides/commands/validate
+
+[exit 1]

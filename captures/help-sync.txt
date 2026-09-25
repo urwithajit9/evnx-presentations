@@ -1,0 +1,81 @@
+$ evnx sync --help
+Keep .env and .env.example in sync
+
+Usage: evnx sync [OPTIONS]
+
+Options:
+      --env <ENV>
+          The environment file to sync from (forward) or into (reverse)
+
+      --example <EXAMPLE>
+          The template to sync into (forward) or from (reverse)
+
+      --env-name <NAME>
+          Use `.env.<NAME>` instead of `.env`.
+          
+          `--env-name production` resolves to `.env.production`. A name whose file does not exist is an error listing the environments that do.
+
+      --direction <DIRECTION>
+          Direction of sync operation
+
+          Possible values:
+          - forward: Sync .env → .env.example (add new vars to template)
+          - reverse: Sync .env.example → .env (add missing vars to local env)
+          
+          [default: forward]
+
+      --placeholder
+          Use placeholder values when adding new variables
+
+  -n, --dry-run
+          Preview changes without writing to files
+
+      --check
+          Report whether the files are in step through the exit code.
+          
+          Implies --dry-run: nothing is ever written. This is the CI gate.
+          
+            0  in sync
+            1  out of sync — commit the result of `evnx sync`
+            2  error — a file is missing, or will not parse
+          
+          The three codes follow `diff` and `grep`, so a pipeline can tell a stale
+          template from a broken run. Plain --dry-run previews and always exits 0.
+
+      --format <FORMAT>
+          Output format for `--check`: `pretty` (default) or `json`.
+          
+          ⚠️ `json` requires `--check`, because without it `sync` edits files and a machine-readable report of an edit already made is worth less than the edit. The report says *what* drifted — until now the only answer a pipeline could get was the exit code.
+          
+          [default: pretty]
+
+  -f, --force
+          Skip interactive prompts (for CI/CD usage)
+
+      --template-config <PATH>
+          Path to custom placeholder template config (JSON)
+
+      --naming-policy <NAMING_POLICY>
+          Warn on non-standard env var naming (default: warn) Defaults to `warn`, or `[sync] naming_policy` from `.evnx.toml`
+
+          Possible values:
+          - warn:   Warn but continue (default)
+          - error:  Treat non-standard names as errors
+          - ignore: Ignore naming conventions entirely
+
+  -v, --verbose
+          Enable verbose output
+
+  -q, --quiet
+          Suppress non-essential output
+
+      --no-color
+          Disable colored output
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+  -V, --version
+          Print version
+
+Full guide: https://www.evnx.dev/guides/commands/sync

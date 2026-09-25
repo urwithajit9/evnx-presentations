@@ -1,0 +1,69 @@
+\section{evnx auth}
+
+\begin{frame}{\cmd{evnx auth} — your evnx cloud account}
+  \begin{block}{Synopsis}\texttt{evnx auth <SUBCOMMAND>}\end{block}
+
+  \begin{tabular}{@{}ll@{}}
+    \toprule
+    \texttt{auth register} & Create an account (keys generated locally) \\
+    \texttt{auth login}    & SRP-6a login, TOTP challenge if enabled \\
+    \texttt{auth logout}   & End the session \\
+    \texttt{auth status}   & Who am I, against which server \\
+    \midrule
+    \texttt{auth token create/list/revoke} & CI tokens (\texttt{evnx\_tok\_\ldots}) \\
+    \texttt{auth totp enable/disable}      & Second factor \\
+    \texttt{auth totp recovery-codes}      & 10 single-use codes, shown once \\
+    \texttt{auth sessions list/revoke}     & Active sessions \\
+    \texttt{auth sessions revoke-others}   & After a laptop goes missing \\
+    \bottomrule
+  \end{tabular}
+
+  \vspace{0.5em}
+  {\footnotesize Credentials live in \file{\textasciitilde/.config/evnx/},
+  mode \texttt{0600} — the \file{\textasciitilde/.aws/credentials} model.}
+\end{frame}
+
+\begin{frame}[fragile]{The login flow — your password never leaves the device}
+\begin{semiverbatim}\scriptsize
+POST /auth/register    SRP verifier + salts + public keys (all client-side)
+GET  /auth/verify-email   emailed link flips email_verified
+POST /auth/srp/init    -> session_id, salts, server public B
+POST /auth/srp/verify  M1 -> M2 + \{ access, refresh \}
+                          -> M2 + totp_pending_token   (if TOTP on)
+POST /auth/totp/verify pending token + code -> \{ access, refresh \}
+\end{semiverbatim}
+
+  \vspace{0.4em}
+  \begin{block}{SRP-6a in one sentence}
+    The server stores a \emph{verifier}, not a password hash it could brute
+    force offline in the usual way, and the proof exchange never transmits the
+    password or anything derived from it that a passive observer could reuse.
+  \end{block}
+
+  {\footnotesize 15-minute access token; 30-day refresh token, rotated on use.}
+\end{frame}
+
+\begin{frame}[fragile]{The transport guard}
+  \capture{66-tls-guard.txt}
+
+  {\footnotesize Loopback is exempt, so local development against
+  \texttt{http://127.0.0.1:8080} works. The error explains the \emph{threat},
+  not just the rule.}
+\end{frame}
+
+\begin{frame}{Use cases}
+  \begin{itemize}\footnotesize
+    \item \textbf{CI token, scoped to one vault, read-only}\\
+      \texttt{evnx auth token create --scope read\_only --vault app/production}
+    \item \textbf{Turn on 2FA} — \texttt{evnx auth totp enable} (QR in the terminal)
+    \item \textbf{Save the recovery codes} — \texttt{evnx auth totp recovery-codes}
+    \item \textbf{Lost laptop} — \texttt{evnx auth sessions revoke-others}
+  \end{itemize}
+
+  \vspace{0.8em}
+  \begin{block}{Minting a token requires a real login}
+    \texttt{/auth/tokens} sits behind a user-session guard, so a leaked CI token
+    cannot mint itself a longer-lived, wider-scoped replacement and survive
+    revocation of the original.
+  \end{block}
+\end{frame}

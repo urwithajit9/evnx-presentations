@@ -1,0 +1,8 @@
+$ evnx scan --format github
+  config    .evnx.toml
+::error file=./.env,line=5,title=Secret detected (high)::SECRET_KEY is named like a secret (Declared secret). The value was not checked against a known key format — confirm before rotating
+::error file=./.env,line=6,title=Secret detected (high)::SENDGRID_API_KEY is named like a secret (Sensitive config key: SENDGRID_API_KEY). The value was not checked against a known key format — confirm before rotating
+::error file=./.env,line=7,title=Secret detected (high)::STRIPE_SECRET_KEY matches Stripe Secret Key (LIVE). Rotate it at https://dashboard.stripe.com/apikeys
+  Docs: https://www.evnx.dev/guides/commands/scan
+
+[exit 1]

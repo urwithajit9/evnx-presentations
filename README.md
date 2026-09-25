@@ -1,0 +1,153 @@
+# evnx presentations — Beamer sources
+
+Three decks, built from **real execution output** captured from `evnx 0.5.0`
+at commit `9cfe75b`. No output in these slides was typed by hand; every
+terminal block is `\input` from a file in `captures/`.
+
+| Deck | Audience | Frames |
+|---|---|---|
+| [`user-guide/`](user-guide) | Users — every command, syntax, flags, use cases | 88 |
+| [`use-cases/`](use-cases) | Developer advocacy — workflows combining commands + cloud sync | 26 |
+| [`architecture/`](architecture) | Rust contributors — ecosystem, internals, testing, conventions | 26 |
+
+---
+
+## ⚠️ Not compile-verified
+
+**There is no LaTeX toolchain on the machine these were written on**
+(`pdflatex` absent; installing texlive needs an interactive `sudo`). The sources
+are therefore **structurally validated but not compiled**. Run
+`python3 check-tex.py` and then build — expect to fix minor typesetting nits on
+the first real run (overfull boxes, a frame that wants `\small`).
+
+What `check-tex.py` does verify, on all 36 `.tex` files:
+
+- `\begin{…}` / `\end{…}` balance, with the offending line number
+- every `\capture{f}` and `\capturepart{f}{a}{b}` target exists
+- `\capturepart` line ranges are inside the file
+- every frame containing verbatim content is marked `[fragile]`
+- every `\input{…}` target resolves
+
+```bash
+python3 check-tex.py
+# checked 36 .tex files, 156 frames, 62 capture references
+# RESULT: PASS — no structural errors
+```
+
+---
+
+## Building
+
+```bash
+sudo apt-get install -y \
+  texlive-latex-recommended texlive-latex-extra \
+  texlive-fonts-recommended texlive-pictures
+```
+
+`texlive-pictures` is needed for TikZ (the ecosystem diagram in
+`architecture/`). `texlive-latex-extra` supplies `beamer`.
+
+```bash
+cd user-guide    && pdflatex -interaction=nonstopmode main.tex && pdflatex main.tex
+cd ../use-cases  && pdflatex -interaction=nonstopmode main.tex && pdflatex main.tex
+cd ../architecture && pdflatex -interaction=nonstopmode main.tex && pdflatex main.tex
+```
+
+Run twice — the second pass resolves `\tableofcontents`.
+
+`latexmk -pdf main.tex` does both passes if you have it.
+
+---
+
+## Layout
+
+```
+evnx-presentations/
+├── check-tex.py              structural validator (no LaTeX needed)
+├── common/
+│   └── evnx-preamble.tex     theme, colours, listings style, glyph mapping
+├── captures/                 97 real runs (59 referenced; the rest are
+│                             source material for future slides)
+├── user-guide/
+│   ├── main.tex              the combined deck
+│   ├── commands/cmd-*.tex    16 files, frames only, no preamble
+│   └── standalone/*.tex      16 one-command decks that build alone
+├── use-cases/main.tex
+└── architecture/main.tex
+```
+
+### Per-command decks
+
+Each command's frames live in **one file with no preamble**, so they can be
+used two ways:
+
+```bash
+# all 16 commands, one deck
+cd user-guide && pdflatex main.tex
+
+# just evnx scan
+cd user-guide/standalone && pdflatex scan.tex
+```
+
+Adding a command means writing `commands/cmd-foo.tex`, adding one
+`\input{commands/cmd-foo}` line to `main.tex`, and dropping a wrapper in
+`standalone/`.
+
+---
+
+## The capture mechanism
+
+Slides never contain pasted output. They reference it:
+
+```latex
+\capture{24-scan.txt}                  % the whole run
+\capturepart{28-scan-sarif.txt}{1}{20} % lines 1–20
+```
+
+Each capture file starts with the command that produced it and ends with its
+exit code:
+
+```
+$ evnx validate --no-color
+  ...
+[exit 1]
+```
+
+**To refresh after a code change**, re-run the capture commands against a new
+build and the slides update with no LaTeX edits. The validator will tell you if
+a `\capturepart` range no longer fits.
+
+### Unicode
+
+evnx emits exactly 11 non-ASCII characters — enumerated from the captures, not
+guessed: `─ — · ✓ → ✗ … ⚠ U+FE0F • ↔`. The preamble maps each one twice:
+`newunicodechar` for body text, and a `literate` rule for `listings`
+(`newunicodechar` does not apply inside verbatim). This is why the decks build
+under plain **pdfLaTeX** without a Unicode font.
+
+---
+
+## Accuracy
+
+Everything factual was executed before it was written. Where a claim could not
+be verified it was cut, and several first drafts were corrected during writing:
+
+- `evnx doctor` was said to flag `localhost` under Docker — **it does not**;
+  that check belongs to `validate` and only fires when Docker config is present.
+- `evnx init` was described as run-once — it has a `--force` flag and refuses
+  with exit `2` otherwise.
+- `backup --password-file` and `restore --key-file` are accepted but **not**
+  shown in `--help`; the slide says so rather than implying the help is complete.
+- Shell-completion line counts were re-measured at this commit (3,432 / 2,771 /
+  551 / 1,376).
+- `backup --verify` exists and is covered.
+
+**Scope note on the cloud family.** The machine these were captured on holds
+live credentials, so `auth`, `vault` and `cloud` captures are help output,
+offline behaviour and the transport guard only. Nothing was pushed, shared or
+revoked against `api.evnx.dev`, and the one account address that appeared was
+redacted to `you@example.com`.
+
+**Version.** The decks state `evnx 0.5.0 @ 9cfe75b`. If v0.5.0 is tagged at a
+later commit, update the footer in `common/evnx-preamble.tex` (`\verifiedon`)
+and the title-slide lines in each `main.tex`.
