@@ -51,7 +51,7 @@ slide in the decks that it affects, not a footnote.
 |---|---|---|
 | `evnx scan dist/` catches secrets inlined into bundles | `dist/` and `build/` are on the default exclusion list → **"0 files scanned", exit 0** | frontend, fullstack, mobile, devops |
 | `scan notebooks/` detects keys in `.ipynb` JSON | `.ipynb` is not in the scannable-extension allowlist — **not scanned at all** | ai-ml |
-| Multi-line values (PEM, JSON) are not supported | **They are.** Only double-quoted values containing escaped `\"` fail | python-backend, fullstack, ai-ml |
+| Multi-line values (PEM, JSON) are not supported | **They are.** The only parser exceptions are triple-quoted `\"\"\"` heredocs and an escaped `\"` inside a value that **spans lines** — on a single line `A="say \"hi\""` parses fine. Separately, `doctor` mis-reports continuation lines as invalid syntax | python-backend, fullstack, ai-ml |
 | `validate` warns about localhost in production | The rule is `check_localhost_docker` — gated on **Docker config**, not on environment | python-backend |
 
 ## Three findings that are new to this round
